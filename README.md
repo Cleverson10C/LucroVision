@@ -107,7 +107,7 @@ brew install python-tk
 
 ## 🚀 Instalação
 
-git clone https://github.com/seu-usuario/farmacia_app.git
+git clone https://github.com/seu-usuario/LucroVisor.git
 1. **Clone ou baixe o projeto:**
 ```bash
 git clone https://github.com/seu-usuario/LucroVisor.git
@@ -180,7 +180,7 @@ python main.py
 
 ## 📁 Estrutura do Projeto
 
-farmacia_app/
+LucroVisor/
 │
 ├── main.py                 # Arquivo principal de execução
 ├── database.py             # Configuração do banco de dados
@@ -302,17 +302,13 @@ sudo apt-get install python3-tk
 
 **Problema:** "Banco de dados não aparece"
 - O banco está na mesma pasta do `main.py`
-- Nome do arquivo: `farmacia.db`
+- Nome do arquivo: `comercio.db`
 - Use os scripts de verificação
 
 **Problema:** "Estoque vazio"
 - Feche completamente o programa
 - Execute novamente `python main.py`
 - Os produtos são criados automaticamente na primeira execução
-
-## 📄 Licença
-
-Este projeto é de código aberto e está disponível para fins educacionais.
 
 ## 👨‍💻 Autor
 
@@ -338,4 +334,4 @@ Para dúvidas ou problemas:
 
 ---
 
-**✨ Obrigado por usar o Sistema de Gerenciamento de Farmácia!**
+**✨ Obrigado por usar o Sistema de Gerenciamento de Estoque Inteligente!**
