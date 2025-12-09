@@ -75,9 +75,10 @@ def tela_cadastro():
                 return
             
             # Preparar dados para inserção
+            categoria_produto = campo_categoria.get().strip()
             dados_produto = (
                 nome_produto,
-                campo_categoria.get(),
+                categoria_produto,
                 preco_custo_produto,
                 preco_venda_produto,
                 quantidade_produto,
@@ -85,24 +86,48 @@ def tela_cadastro():
                 data_validade_convertida
             )
             
-            # Inserir no banco de dados
+            # Inserir ou atualizar no banco de dados
             conexao_banco = conectar()
             cursor_banco = conexao_banco.cursor()
-            cursor_banco.execute("""
-                INSERT INTO produtos (nome, categoria, preco_custo, preco_venda, quantidade, estoque_minimo, validade)
-                VALUES (?, ?, ?, ?, ?, ?, ?)""", dados_produto)
+
+            try:
+                cursor_banco.execute("""
+                    INSERT INTO produtos (nome, categoria, preco_custo, preco_venda, quantidade, estoque_minimo, validade)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, dados_produto)
+                messagebox.showinfo("Sucesso", "Produto cadastrado com sucesso!")
+            except Exception as e:
+                if "UNIQUE constraint failed" in str(e):
+                    # Buscar dados atuais do produto
+                    cursor_banco.execute("SELECT quantidade, preco_venda, preco_custo FROM produtos WHERE nome=?", (nome_produto,))
+                    atual = cursor_banco.fetchone()
+                    qtd_atual = atual[0] if atual else 0
+                    preco_venda_atual = atual[1] if atual else 0.0
+                    preco_custo_atual = atual[2] if atual else 0.0
+                    # Calcular preço médio ponderado
+                    novo_preco_venda = ((qtd_atual * preco_venda_atual) + (quantidade_produto * preco_venda_produto)) / (qtd_atual + quantidade_produto)
+                    novo_preco_custo = ((qtd_atual * preco_custo_atual) + (quantidade_produto * preco_custo_produto)) / (qtd_atual + quantidade_produto)
+                    # Atualiza o produto existente e a categoria
+                    cursor_banco.execute("""
+                        UPDATE produtos SET categoria=?, preco_custo=?, preco_venda=?, quantidade=quantidade+?, estoque_minimo=?, validade=? WHERE nome=?
+                    """, (
+                        categoria_produto,
+                        novo_preco_custo,
+                        novo_preco_venda,
+                        quantidade_produto,
+                        estoque_minimo_produto,
+                        data_validade_convertida,
+                        nome_produto
+                    ))
+                    messagebox.showinfo("Sucesso", f"Produto atualizado! Categoria definida como '{campo_categoria.get()}'. Quantidade somada ao estoque. Preço de venda e custo ajustados pela média ponderada.")
+                else:
+                    messagebox.showerror("Erro", f"Erro ao cadastrar produto: {str(e)}")
             conexao_banco.commit()
             conexao_banco.close()
-            
-            messagebox.showinfo("Sucesso", "Produto cadastrado com sucesso!")
             janela_cadastro.destroy()
             
         except ValueError:
             messagebox.showerror("Erro", "Verifique se os valores numéricos estão corretos!\nUse vírgula ou ponto para decimais.")
-        except Exception as erro:
-            messagebox.showerror("Erro", f"Erro ao cadastrar produto: {str(erro)}")
-
-    # Criar janela de cadastro
     janela_cadastro = tk.Toplevel()
     janela_cadastro.title("Cadastro de Produto")
     janela_cadastro.geometry("380x480")
@@ -121,10 +146,15 @@ def tela_cadastro():
 
     # Criar campos de entrada
     campos_entrada = {}
+    labels_campos = {}
     for rotulo_campo, nome_variavel in campos_formulario:
-        tk.Label(janela_cadastro, text=rotulo_campo).pack(pady=5)
+        labels_campos[nome_variavel] = tk.Label(janela_cadastro, text=rotulo_campo)
+        labels_campos[nome_variavel].pack(pady=5)
         campos_entrada[nome_variavel] = tk.Entry(janela_cadastro)
         campos_entrada[nome_variavel].pack(padx=15, pady=2)
+
+    # Campo e label para exemplo de kg
+    label_kg_exemplo = tk.Label(janela_cadastro, text="(Ex: 0,350 para 350g. Digite o peso em kg)", fg="gray")
 
     # Atribuir campos a variáveis específicas
     campo_nome = campos_entrada["campo_nome"]
@@ -134,6 +164,19 @@ def tela_cadastro():
     campo_quantidade = campos_entrada["campo_quantidade"]
     campo_estoque_minimo = campos_entrada["campo_estoque_minimo"]
     campo_validade = campos_entrada["campo_validade"]
+
+    def ao_mudar_categoria(event):
+        categoria = campo_categoria.get().strip().lower()
+        categorias_kg = ["carnes", "frios", "padaria", "hortifruti"]
+        if categoria in categorias_kg:
+            label_kg_exemplo.pack(after=campo_quantidade)
+            labels_campos["campo_quantidade"].config(text="Peso (kg)")
+        else:
+            label_kg_exemplo.pack_forget()
+            labels_campos["campo_quantidade"].config(text="Quantidade")
+
+    campo_categoria.bind("<FocusOut>", ao_mudar_categoria)
+    campo_categoria.bind("<KeyRelease>", ao_mudar_categoria)
 
     # Botão de salvar
     tk.Button(janela_cadastro, text="Salvar Produto", bg="#27ae60", fg="white", command=salvar_produto).pack(pady=10)

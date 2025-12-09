@@ -74,14 +74,38 @@ def tela_vendas():
     label_estoque = tk.Label(frame_info, text="0 unidades", bg="white", font=("Arial", 10))
     label_estoque.grid(row=2, column=1, sticky=tk.W, padx=10, pady=5)
     
+    # Campo de quantidade (padrão)
     tk.Label(frame_info, text="Quantidade:", bg="white", font=("Arial", 10, "bold")).grid(row=3, column=0, sticky=tk.W, pady=5)
     campo_quantidade = tk.Entry(frame_info, width=15, font=("Arial", 10))
     campo_quantidade.grid(row=3, column=1, sticky=tk.W, padx=10, pady=5)
     campo_quantidade.insert(0, "1")
-    
-    tk.Label(frame_info, text="Total:", bg="white", font=("Arial", 11, "bold")).grid(row=4, column=0, sticky=tk.W, pady=10)
-    label_total = tk.Label(frame_info, text="R$ 0,00", bg="white", font=("Arial", 14, "bold"), fg="#27ae60")
-    label_total.grid(row=4, column=1, sticky=tk.W, padx=10, pady=10)
+    # Campo especial para carnes e frios
+    campo_kg = tk.Entry(frame_info, width=15, font=("Arial", 10))
+    campo_kg.grid(row=3, column=2, sticky=tk.W, padx=10, pady=5)
+    campo_kg.insert(0, "0,100")
+    campo_kg.grid_remove()  # Esconde por padrão
+    label_kg = tk.Label(frame_info, text="(Ex: 0,350 para 350g)", bg="white", font=("Arial", 8, "italic"))
+    label_kg.grid(row=3, column=3, sticky=tk.W, padx=5)
+    label_kg.grid_remove()
+    # Botões de ajuste para kg
+    def ajustar_kg(delta):
+        try:
+            valor = campo_kg.get().replace(",", ".")
+            valor_float = float(valor)
+            novo_valor = max(0.1, round(valor_float + delta, 3))
+            campo_kg.delete(0, tk.END)
+            campo_kg.insert(0, f"{novo_valor:.3f}".replace(".", ","))
+            calcular_total()
+        except:
+            campo_kg.delete(0, tk.END)
+            campo_kg.insert(0, "0,100")
+            calcular_total()
+    btn_menos = tk.Button(frame_info, text="-0,100kg", command=lambda: ajustar_kg(-0.1), width=8)
+    btn_mais = tk.Button(frame_info, text="+0,100kg", command=lambda: ajustar_kg(0.1), width=8)
+    btn_menos.grid(row=3, column=4, padx=2)
+    btn_mais.grid(row=3, column=5, padx=2)
+    btn_menos.grid_remove()
+    btn_mais.grid_remove()
     
     def carregar_produtos(texto_filtro=""):
         """Carrega os produtos disponíveis no estoque"""
@@ -134,14 +158,37 @@ def tela_vendas():
             # Atualizar labels com as informações
             label_produto_selecionado.config(text=produto_selecionado["nome"])
             label_preco.config(text=valores_produto[4])
-            label_estoque.config(text=f"{produto_selecionado['estoque']} unidades")
-            
+            # Verifica se é categoria que usa kg
+            categorias_kg = ["carnes", "frios", "padaria", "hortifruti"]
+            if valores_produto[2].lower() in categorias_kg:
+                campo_quantidade.grid_remove()
+                campo_kg.grid()
+                label_kg.config(text="(Ex: 0,350 para 350g. Digite o peso em kg)")
+                label_kg.grid()
+                btn_menos.grid()
+                btn_mais.grid()
+                label_estoque.config(text=f"{produto_selecionado['estoque']} kg")
+            else:
+                campo_quantidade.grid()
+                campo_kg.grid_remove()
+                label_kg.grid_remove()
+                btn_menos.grid_remove()
+                btn_mais.grid_remove()
+                label_estoque.config(text=f"{produto_selecionado['estoque']} unidades")
             calcular_total()
     
+    # ====== CRIAÇÃO DO LABEL TOTAL =====
+    tk.Label(frame_info, text="Total:", bg="white", font=("Arial", 11, "bold")).grid(row=4, column=0, sticky=tk.W, pady=10)
+    label_total = tk.Label(frame_info, text="R$ 0,00", bg="white", font=("Arial", 14, "bold"), fg="#27ae60")
+    label_total.grid(row=4, column=1, sticky=tk.W, padx=10, pady=10)
+    
     def calcular_total():
-        """Calcula o valor total da venda"""
+        nonlocal label_total
         try:
-            quantidade_digitada = int(campo_quantidade.get())
+            if campo_kg.winfo_ismapped():
+                quantidade_digitada = float(campo_kg.get().replace(",", "."))
+            else:
+                quantidade_digitada = int(campo_quantidade.get())
             valor_total = produto_selecionado["preco"] * quantidade_digitada
             # Formatar para padrão brasileiro (R$ 1.234,56)
             total_formatado = f"R$ {valor_total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
@@ -162,7 +209,10 @@ def tela_vendas():
             return
         
         try:
-            quantidade_para_vender = int(campo_quantidade.get())
+            if campo_kg.winfo_ismapped():
+                quantidade_para_vender = float(campo_kg.get().replace(",", "."))
+            else:
+                quantidade_para_vender = int(campo_quantidade.get())
             
             # Validar quantidade
             if quantidade_para_vender <= 0:
@@ -172,7 +222,10 @@ def tela_vendas():
             # Validar estoque disponível
             estoque_disponivel = produto_selecionado["estoque"]
             if quantidade_para_vender > estoque_disponivel:
-                messagebox.showerror("Erro", f"Estoque insuficiente! Disponível: {estoque_disponivel} unidades")
+                if campo_kg.winfo_ismapped():
+                    messagebox.showerror("Erro", f"Estoque insuficiente! Disponível: {estoque_disponivel} kg")
+                else:
+                    messagebox.showerror("Erro", f"Estoque insuficiente! Disponível: {estoque_disponivel} unidades")
                 return
             
             # Calcular total e confirmar venda
@@ -190,24 +243,25 @@ def tela_vendas():
             if not usuario_confirmou:
                 return
             
+
             # Conectar ao banco e registrar venda
             conexao_banco = conectar()
             cursor_banco = conexao_banco.cursor()
-            
+
             # Inserir registro de venda
             data_venda_atual = datetime.now().strftime("%Y-%m-%d")
             cursor_banco.execute("""
                 INSERT INTO vendas (produto_id, quantidade, data_venda)
                 VALUES (?, ?, ?)
             """, (produto_selecionado["id"], quantidade_para_vender, data_venda_atual))
-            
+
             # Atualizar quantidade em estoque
             cursor_banco.execute("""
                 UPDATE produtos 
                 SET quantidade = quantidade - ?
                 WHERE id = ?
             """, (quantidade_para_vender, produto_selecionado["id"]))
-            
+
             conexao_banco.commit()
             conexao_banco.close()
             
@@ -227,6 +281,8 @@ def tela_vendas():
             label_total.config(text="R$ 0,00")
             campo_quantidade.delete(0, tk.END)
             campo_quantidade.insert(0, "1")
+            campo_kg.delete(0, tk.END)
+            campo_kg.insert(0, "0,100")
             
             # Recarregar lista de produtos
             carregar_produtos()
@@ -240,6 +296,7 @@ def tela_vendas():
     tabela_produtos.bind('<<TreeviewSelect>>', ao_selecionar_produto)
     campo_busca.bind('<KeyRelease>', buscar_produto)
     campo_quantidade.bind('<KeyRelease>', lambda evento: calcular_total())
+    campo_kg.bind('<KeyRelease>', lambda evento: calcular_total())
     
     # Botões
     frame_botoes = tk.Frame(janela_vendas, bg="#f0f0f0")
