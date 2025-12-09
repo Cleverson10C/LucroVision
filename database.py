@@ -40,5 +40,6 @@ def criar_tabelas():
         FOREIGN KEY(produto_id) REFERENCES produtos(id)
     )""")
 
+
     conexao_banco.commit()
     conexao_banco.close()

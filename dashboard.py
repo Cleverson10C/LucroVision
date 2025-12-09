@@ -6,16 +6,26 @@ import relatorios
 import vendas
 from database import conectar
 from datetime import datetime, timedelta
+from tkinter import PhotoImage
+from PIL import Image, ImageTk
 
 def abrir_dashboard():
     janela = tk.Tk()
-    janela.title("Dashboard - Sistema de Gerenciamento de Produtos")
+    janela.title("Painel de Gestão de Produtos — LucroVision")
     janela.geometry("900x700")
     # janela.resizable(True, True)
     janela.configure(bg="#f0f0f0")
 
+    # Carregar e redimensionar o logo
+    logo_img = Image.open("Logo.png")
+    logo_img = logo_img.resize((80, 80), Image.LANCZOS)
+    logo_tk = ImageTk.PhotoImage(logo_img)
+
     # Função para atualizar dados
     def atualizar_dashboard():
+        print('Função atualizar_dashboard chamada!')
+        from tkinter import messagebox
+        messagebox.showinfo('Atualização', 'Dashboard atualizado!')
         conn = conectar()
         cursor = conn.cursor()
         
@@ -54,7 +64,6 @@ def abrir_dashboard():
             WHERE v.data_venda >= ?
             GROUP BY p.nome
             ORDER BY total DESC
-            LIMIT 5
         """, (data_30_dias,))
         mais_vendidos = cursor.fetchall()
         
@@ -66,14 +75,15 @@ def abrir_dashboard():
             tree_vendidos.insert("", tk.END, values=(produto, quantidade))
         
         # Produtos próximos ao vencimento (próximos 60 dias)
-        data_60_dias = (datetime.now() + timedelta(days=60)).strftime("%Y-%m-%d")
+        data_60_dias = datetime.now() + timedelta(days=60)
+        ano_mes_limite = data_60_dias.strftime("%Y-%m")
         cursor.execute("""
             SELECT nome, validade, quantidade
             FROM produtos
             WHERE validade <= ?
             ORDER BY validade ASC
-            LIMIT 5
-        """, (data_60_dias,))
+            LIMIT 30
+        """, (ano_mes_limite,))
         proximos_vencimento = cursor.fetchall()
         
         # Limpar lista de vencimentos
@@ -81,16 +91,32 @@ def abrir_dashboard():
             tree_vencimento.delete(item)
         
         for produto, validade, qtd in proximos_vencimento:
-            tree_vencimento.insert("", tk.END, values=(produto, validade, qtd))
+            # Formatar validade para MM/YYYY
+            validade_formatada = ""
+            if validade:
+                try:
+                    partes = validade.split("-")
+                    validade_formatada = f"{partes[1]}/{partes[0]}"
+                except:
+                    validade_formatada = validade
+            tree_vencimento.insert("", tk.END, values=(produto, validade_formatada, qtd))
         
         conn.close()
 
     # ===== CABEÇALHO =====
-    frame_header = tk.Frame(janela, bg="#2c3e50", height=80)
+    frame_header = tk.Frame(janela, bg="#FFFFFF", height=80)
     frame_header.pack(fill=tk.X)
-    
-    tk.Label(frame_header, text="🏥 Dashboard - Sistema de Gerenciamento de Produtos", 
-             font=("Arial", 20, "bold"), bg="#2c3e50", fg="white").pack(pady=20)
+    # Frame para destacar a logo (sem borda)
+    frame_logo = tk.Frame(frame_header, bg="#FFFFFF")
+    frame_logo.pack(side=tk.LEFT, padx=8, pady=2)
+    label_logo = tk.Label(frame_logo, image=logo_tk, bg="#FFFFFF")
+    label_logo.image = logo_tk  # Mantém referência
+    label_logo.pack(padx=2, pady=2)
+    # Frame para centralizar texto
+    frame_texto = tk.Frame(frame_header, bg="#FFFFFF")
+    frame_texto.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=4)
+    tk.Label(frame_texto, text="Painel de Gestão de Produtos", 
+             font=("Arial", 18,"bold"), bg="#FFFFFF", fg="#000000").pack(expand=True, pady=2)
 
     # ===== FRAME PRINCIPAL =====
     frame_main = tk.Frame(janela, bg="#f0f0f0")
@@ -104,8 +130,8 @@ def abrir_dashboard():
         card = tk.Frame(parent, bg=cor, relief=tk.RAISED, borderwidth=2)
         card.pack(side=tk.LEFT, padx=10, fill=tk.BOTH, expand=True)
         
-        tk.Label(card, text=titulo, font=("Arial", 10), bg=cor, fg="white").pack(pady=(15, 5))
-        label_valor = tk.Label(card, text="0", font=("Arial", 24, "bold"), bg=cor, fg="white")
+        tk.Label(card, text=titulo, font=("Arial", 10), bg=cor, fg="white").pack(pady=(10, 5))
+        label_valor = tk.Label(card, text="0", font=("Arial", 18, "bold"), bg=cor, fg="white")
         label_valor.pack(pady=(0, 15))
         
         return label_valor

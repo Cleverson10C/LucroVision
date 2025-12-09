@@ -11,7 +11,9 @@ def cadastrar_produtos_iniciais():
     
     from datetime import datetime, timedelta
     
-    conexao = conectar()
+    # Garantir que conecta ao comercio.db
+    import sqlite3
+    conexao = sqlite3.connect("comercio.db")
     cursor = conexao.cursor()
     
     produtos_cadastrados = 0
@@ -34,40 +36,49 @@ def cadastrar_produtos_iniciais():
     }
     
     for categoria, lista_produtos in produtos_supermercado.items():
-        print(f"Categoria: {categoria}")
-        
-        for produto in lista_produtos:
-            try:
-                # Gerar preços aleatórios para exemplo
-                preco_custo = round(random.uniform(2.0, 50.0), 2)
-                preco_venda = round(preco_custo * random.uniform(1.2, 1.8), 2)
-                quantidade = random.randint(10, 100)
-                estoque_minimo = random.randint(5, 20)
-                
-                # Gerar validade baseada na categoria
-                min_meses, max_meses = validades_por_categoria.get(categoria, (6, 12))
-                meses_validade = random.uniform(min_meses, max_meses)
-                dias_validade = int(meses_validade * 30)
-                data_validade = datetime.now() + timedelta(days=dias_validade)
-                validade_formatada = data_validade.strftime("%Y-%m")
-                
-                # Inserir produto
-                cursor.execute("""
-                    INSERT INTO produtos (nome, categoria, preco_custo, preco_venda, quantidade, estoque_minimo, validade)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, (produto, categoria, preco_custo, preco_venda, quantidade, estoque_minimo, validade_formatada))
-                
-                produtos_cadastrados += 1
-                print(f"  ✓ {produto}")
-                
-            except Exception as e:
-                if "UNIQUE constraint failed" in str(e):
-                    produtos_ja_existentes += 1
-                    print(f"  - {produto} (já existe)")
-                else:
-                    print(f"  ✗ Erro ao cadastrar {produto}: {e}")
-        
-        print()
+        # Separar carnes e frios
+        if categoria == "Carnes e Frios":
+            carnes = [
+                "Carne Bovina (Alcatra)", "Carne Bovina (Patinho)", "Frango Inteiro",
+                "Peito de Frango", "Carne Suína"
+            ]
+            frios = [
+                "Linguiça", "Salsicha", "Presunto", "Mortadela", "Bacon", "Salame"
+            ]
+            categorias_separadas = [("Carnes", carnes), ("Frios", frios)]
+        else:
+            categorias_separadas = [(categoria, lista_produtos)]
+
+        for cat, lista_prod in categorias_separadas:
+            print(f"Categoria: {cat}")
+            for produto in lista_prod:
+                try:
+                    preco_custo = round(random.uniform(2.0, 50.0), 2)
+                    preco_venda = round(preco_custo * random.uniform(1.2, 1.8), 2)
+                    quantidade = random.randint(10, 100)
+                    estoque_minimo = random.randint(5, 20)
+
+                    min_meses, max_meses = validades_por_categoria.get(categoria, (6, 12))
+                    meses_validade = random.uniform(min_meses, max_meses)
+                    dias_validade = int(meses_validade * 30)
+                    data_validade = datetime.now() + timedelta(days=dias_validade)
+                    validade_formatada = data_validade.strftime("%Y-%m")
+
+                    cursor.execute("""
+                        INSERT INTO produtos (nome, categoria, preco_custo, preco_venda, quantidade, estoque_minimo, validade)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, (produto, cat, preco_custo, preco_venda, quantidade, estoque_minimo, validade_formatada))
+
+                    produtos_cadastrados += 1
+                    print(f"  ✓ {produto}")
+
+                except Exception as e:
+                    if "UNIQUE constraint failed" in str(e):
+                        produtos_ja_existentes += 1
+                        print(f"  - {produto} (já existe)")
+                    else:
+                        print(f"  ✗ Erro ao cadastrar {produto}: {e}")
+            print()
     
     conexao.commit()
     conexao.close()

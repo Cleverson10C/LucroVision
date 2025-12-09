@@ -33,13 +33,13 @@ class LicencaDialog(tk.Tk):
         # self.resizable(False, False)
         self.licenca = None
 
-        self.label = tk.Label(self, text="Digite sua licença de acesso:")
+        self.label = tk.Label(self, text="Digite sua licença de acesso:", font=("Arial", 11))
         self.label.pack(pady=10)
 
         self.entry = tk.Entry(self, width=32)
         self.entry.pack(pady=5)
 
-        self.button = tk.Button(self, text="Validar", bg="#3498db", fg="white", command=self.validar)
+        self.button = tk.Button(self, text="Validar", bg="#3498db", fg="white",  font=("Arial", 10, "bold"), command=self.validar)
         self.button.pack(pady=10)
 
     def validar(self):
@@ -113,15 +113,15 @@ def cadastrar_usuario():
     tk.Label(janela_cadastro, text="Cadastro de Usuário", font=("Arial", 14, "bold"), 
              bg="#f0f0f0").pack(pady=10)
     
-    tk.Label(janela_cadastro, text="Usuário:", bg="#f0f0f0").pack(pady=5)
+    tk.Label(janela_cadastro, text="Usuário:", font=("Arial", 10), bg="#f0f0f0").pack(pady=5)
     campo_novo_usuario = tk.Entry(janela_cadastro, width=30)
     campo_novo_usuario.pack()
     
-    tk.Label(janela_cadastro, text="Senha:", bg="#f0f0f0").pack(pady=5)
+    tk.Label(janela_cadastro, text="Senha:", font=("Arial", 10), bg="#f0f0f0").pack(pady=5)
     campo_nova_senha = tk.Entry(janela_cadastro, width=30, show="*")
     campo_nova_senha.pack()
     
-    tk.Label(janela_cadastro, text="Confirmar Senha:", bg="#f0f0f0").pack(pady=5)
+    tk.Label(janela_cadastro, text="Confirmar Senha:", font=("Arial", 10), bg="#f0f0f0").pack(pady=5)
     campo_confirmar_senha = tk.Entry(janela_cadastro, width=30, show="*")
     campo_confirmar_senha.pack()
     
@@ -129,11 +129,11 @@ def cadastrar_usuario():
     frame_botoes.pack(pady=20)
     
     tk.Button(frame_botoes, text="Cadastrar", command=salvar_usuario, 
-             bg="#27ae60", fg="white", font=("Arial", 10, "bold"), 
+             bg="#27ae60", fg="white", font=("Arial", 11, "bold"), 
              padx=20, pady=5).pack(side=tk.LEFT, padx=5)
     
     tk.Button(frame_botoes, text="Cancelar", command=janela_cadastro.destroy, 
-             bg="#c0392b", fg="white", font=("Arial", 10, "bold"), 
+             bg="#c0392b", fg="white", font=("Arial", 11, "bold"), 
              padx=20, pady=5).pack(side=tk.LEFT, padx=5)
 
 def tela_login():
@@ -173,11 +173,11 @@ def tela_login():
     tk.Label(janela_login, text="Gerenciamento de Usuários", font=("Arial", 14, "bold"), 
              bg="#f0f0f0").pack(pady=15)
 
-    tk.Label(janela_login, text="Usuário:", bg="#f0f0f0").pack(pady=5)
+    tk.Label(janela_login, text="Usuário:", font=("Arial", 10), bg="#f0f0f0").pack(pady=5)
     campo_usuario = tk.Entry(janela_login, width=30)
     campo_usuario.pack()
 
-    tk.Label(janela_login, text="Senha:", bg="#f0f0f0").pack(pady=5)
+    tk.Label(janela_login, text="Senha:", font=("Arial", 10), bg="#f0f0f0").pack(pady=5)
     campo_senha = tk.Entry(janela_login, width=30, show="*")
     campo_senha.pack()
 
@@ -189,10 +189,10 @@ def tela_login():
              padx=40, pady=8).pack(pady=20)
     
     tk.Label(janela_login, text="Não tem cadastro?", bg="#f0f0f0", 
-             font=("Arial", 9)).pack()
+             font=("Arial", 10)).pack()
     
     tk.Button(janela_login, text="Cadastrar novo usuário", command=cadastrar_usuario, 
-             bg="#95a5a6", fg="white", font=("Arial", 9), 
+             bg="#27ae60", fg="white", font=("Arial", 11, "bold"), 
              padx=20, pady=5).pack(pady=5)
 
     janela_login.mainloop()

@@ -22,10 +22,29 @@ def tela_estoque():
 
     tk.Label(frame_superior, text="Controle de Estoque", font=("Arial", 14, "bold")).pack(side=tk.LEFT, padx=10)
 
-    # Variável para controlar qual filtro está ativo
+    # Variáveis para filtros
     tipo_filtro = tk.StringVar(value="todos")
+    categoria_filtro = tk.StringVar(value="Todas")
+
+    # Combobox de categoria dinâmico
+    def atualizar_categorias():
+        conexao_banco = conectar()
+        cursor_banco = conexao_banco.cursor()
+        cursor_banco.execute("SELECT DISTINCT categoria FROM produtos WHERE categoria IS NOT NULL AND categoria != ''")
+        cats = sorted([row[0] for row in cursor_banco.fetchall()])
+        conexao_banco.close()
+        lista_categorias = ["Todas"] + cats
+        combo_categoria['values'] = lista_categorias
+        if categoria_filtro.get() not in lista_categorias:
+            categoria_filtro.set("Todas")
+
+    tk.Label(frame_superior, text="Categoria:").pack(side=tk.LEFT, padx=5)
+    combo_categoria = ttk.Combobox(frame_superior, state="readonly", textvariable=categoria_filtro, width=12)
+    combo_categoria.pack(side=tk.LEFT, padx=5)
+    atualizar_categorias()
 
     def carregar_lista_produtos():
+        atualizar_categorias()
         """Carrega os produtos do banco de dados conforme o filtro selecionado"""
         # Limpar itens anteriores da tabela
         for item_tabela in tabela_produtos.get_children():
@@ -34,25 +53,30 @@ def tela_estoque():
         # Conectar ao banco de dados
         conexao_banco = conectar()
         cursor_banco = conexao_banco.cursor()
-        
-        # Buscar produtos conforme filtro
-        if tipo_filtro.get() == "baixo":
-            # Apenas produtos com estoque abaixo do mínimo
-            cursor_banco.execute("""
-                SELECT nome, categoria, quantidade, estoque_minimo, preco_venda, validade 
-                FROM produtos 
-                WHERE quantidade <= estoque_minimo
-                ORDER BY quantidade ASC
-            """)
+
+        # Buscar produtos conforme filtro de categoria e tipo
+        categoria = categoria_filtro.get()
+        tipo_visualizacao = tipo_filtro.get()
+        parametros = []
+        filtros_sql = []
+
+        if tipo_visualizacao == "baixo":
+            filtros_sql.append("quantidade <= estoque_minimo")
         else:
-            # Todos os produtos (exceto os com estoque baixo)
-            cursor_banco.execute("""
-                SELECT nome, categoria, quantidade, estoque_minimo, preco_venda, validade 
-                FROM produtos 
-                WHERE quantidade > estoque_minimo
-                ORDER BY nome ASC
-            """)
-        
+            filtros_sql.append("quantidade > estoque_minimo")
+
+        if categoria != "Todas":
+            filtros_sql.append("categoria = ?")
+            parametros.append(categoria)
+
+        filtros_combinados = " AND ".join(filtros_sql)
+        consulta = f"""
+            SELECT nome, categoria, quantidade, estoque_minimo, preco_venda, validade
+            FROM produtos
+            WHERE {filtros_combinados}
+            ORDER BY nome ASC
+        """
+        cursor_banco.execute(consulta, parametros)
         lista_produtos = cursor_banco.fetchall()
         conexao_banco.close()
 
@@ -60,37 +84,42 @@ def tela_estoque():
         if lista_produtos:
             for produto_info in lista_produtos:
                 nome_produto, categoria_produto, quantidade_atual, quantidade_minima, preco_produto, data_validade = produto_info
-                
+
                 # Definir cor de destaque para estoque baixo
                 cor_destaque = "estoque_baixo" if quantidade_atual <= quantidade_minima else "estoque_normal"
-                
+
+                # Formatar quantidade com unidade para carnes, frios, padaria e hortifruti
+                if categoria_produto and categoria_produto.lower() in ["carnes", "frios", "padaria","hortifruti"]:
+                    quantidade_exibicao = f"{quantidade_atual:.3f} kg"
+                    quantidade_minima_exibicao = f"{quantidade_minima:.3f} kg"
+                else:
+                    quantidade_exibicao = str(quantidade_atual)
+                    quantidade_minima_exibicao = str(quantidade_minima)
+
                 # Formatar data para formato brasileiro (MM/YYYY)
                 if data_validade:
                     try:
-                        # Converter de YYYY-MM ou YYYY-MM-DD para MM/YYYY
                         partes_data = data_validade.split('-')
-                        # Se tiver formato YYYY-MM ou YYYY-MM-DD, pegar ano e mês
                         data_formatada = f"{partes_data[1]}/{partes_data[0]}"
                     except:
                         data_formatada = data_validade
                 else:
                     data_formatada = ""
-                
+
                 # Inserir produto na tabela
-                tabela_produtos.insert("", tk.END, 
-                    values=(nome_produto, categoria_produto, quantidade_atual, quantidade_minima, 
-                            f"R$ {preco_produto:.2f}", data_formatada), 
+                tabela_produtos.insert("", tk.END,
+                    values=(nome_produto, categoria_produto, quantidade_exibicao, quantidade_minima_exibicao,
+                            f"R$ {preco_produto:.2f}", data_formatada),
                     tags=(cor_destaque,))
         else:
-            # Mensagem quando não há produtos
-            if tipo_filtro.get() == "baixo":
-                tabela_produtos.insert("", tk.END, values=("Nenhum produto com estoque baixo", "", "", "", "", ""))
+            tabela_produtos.insert("", tk.END, values=("Nenhum produto encontrado", "", "", "", "", ""))
 
     # Botões de filtro (radio buttons)
     tk.Radiobutton(frame_superior, text="Todos os Produtos", variable=tipo_filtro, value="todos", 
                    command=carregar_lista_produtos).pack(side=tk.LEFT, padx=5)
     tk.Radiobutton(frame_superior, text="Apenas Estoque Baixo", variable=tipo_filtro, value="baixo", 
                    command=carregar_lista_produtos).pack(side=tk.LEFT, padx=5)
+    combo_categoria.bind("<<ComboboxSelected>>", lambda e: carregar_lista_produtos())
 
     # Frame para conter a tabela de produtos
     frame_tabela = tk.Frame(janela_estoque)

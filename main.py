@@ -1,8 +1,8 @@
 """
-Sistema de Gerenciamento de Farmácia
+Sistema de Gerenciamento de Estoque Inteligente - LucroVisor
 Arquivo principal - Inicializa o banco de dados e abre a tela de login
 """
-
+        
 from database import criar_tabelas
 from login import tela_login
 
