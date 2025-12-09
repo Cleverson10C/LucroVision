@@ -1,5 +1,5 @@
 """
-Sistema de Gerenciamento de Estoque Inteligente - LucroVisor
+Sistema de Gerenciamento de Estoque Inteligente - LucroVision
 Arquivo principal - Inicializa o banco de dados e abre a tela de login
 """
         
