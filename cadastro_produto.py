@@ -127,8 +127,8 @@ def tela_cadastro():
             janela_cadastro.destroy()
             
         except ValueError:
-            messagebox.showerror("Erro", "Verifique se os valores numéricos estão corretos!\nUse vírgula ou ponto para decimais.")
-    janela_cadastro = tk.Toplevel()
+            messagebox.showerror("Erro", "Valores numéricos inválidos! Verifique os campos de preço e quantidade.")
+    janela_cadastro = tk.Toplevel() 
     janela_cadastro.title("Cadastro de Produto")
     janela_cadastro.geometry("380x480")
     # janela_cadastro.resizable(False, False)
@@ -153,9 +153,7 @@ def tela_cadastro():
         campos_entrada[nome_variavel] = tk.Entry(janela_cadastro)
         campos_entrada[nome_variavel].pack(padx=15, pady=2)
 
-    # Campo e label para exemplo de kg
-    label_kg_exemplo = tk.Label(janela_cadastro, text="(Ex: 0,350 para 350g. Digite o peso em kg)", fg="gray")
-
+    
     # Atribuir campos a variáveis específicas
     campo_nome = campos_entrada["campo_nome"]
     campo_categoria = campos_entrada["campo_categoria"]
@@ -165,7 +163,10 @@ def tela_cadastro():
     campo_estoque_minimo = campos_entrada["campo_estoque_minimo"]
     campo_validade = campos_entrada["campo_validade"]
 
-    def ao_mudar_categoria(event):
+    # Label de exemplo para categorias em kg
+    label_kg_exemplo = tk.Label(janela_cadastro, text="Exemplo: 2.5 (kg)", fg="gray")
+
+    def ao_mudar_categoria(event): 
         categoria = campo_categoria.get().strip().lower()
         categorias_kg = ["carnes", "frios", "padaria", "hortifruti"]
         if categoria in categorias_kg:

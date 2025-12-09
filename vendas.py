@@ -13,7 +13,7 @@ def tela_vendas():
     
     janela_vendas = tk.Toplevel()
     janela_vendas.title("Registrar Venda")
-    janela_vendas.geometry("700x650")
+    janela_vendas.geometry("800x680")
     janela_vendas.configure(bg="#f0f0f0")
     
     # Frame superior - Seleção de produto
