@@ -1,4 +1,4 @@
-# 📊 LucroVisor - Sistema de Gerenciamento de Estoque Inteligente
+# 📊 LucroVision - Sistema de Gerenciamento de Estoque Inteligente
 
 Sistema completo de gerenciamento para estoque desenvolvido em Python com interface gráfica Tkinter e banco de dados SQLite.
 
@@ -180,7 +180,7 @@ python main.py
 
 ## 📁 Estrutura do Projeto
 
-LucroVisor/
+LucroVision/
 │
 ├── main.py                 # Arquivo principal de execução
 ├── database.py             # Configuração do banco de dados
