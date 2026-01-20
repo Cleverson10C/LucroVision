@@ -5,7 +5,7 @@ def tela_relatorios():
     """Cria e exibe a tela de relatórios de lucratividade"""
     janela_relatorios = tk.Toplevel()
     janela_relatorios.title("Relatórios de Lucratividade")
-    janela_relatorios.geometry("700x600")
+    janela_relatorios.geometry("800x700")
 
     # Seção de Lucro Mensal
     tk.Label(janela_relatorios, text="Lucro Mensal", font=("Arial", 12, "bold")).pack(pady=5)
@@ -63,7 +63,7 @@ def tela_relatorios():
             if mes_anterior is not None:
                 # Mostrar total do mês anterior
                 total_formatado = f"{totais_por_mes[mes_anterior]:,.2f}"
-                lista_lucros_mensais.insert(tk.END, f"  {'─' * 60}")
+                lista_lucros_mensais.insert(tk.END, f"  {'─' * 120}")
                 lista_lucros_mensais.insert(tk.END, f"  TOTAL {mes_anterior_formatado}: R$ {total_formatado}")
                 lista_lucros_mensais.insert(tk.END, "")
             
@@ -90,7 +90,7 @@ def tela_relatorios():
     scrollbar_anual = tk.Scrollbar(frame_anual)
     scrollbar_anual.pack(side=tk.RIGHT, fill=tk.Y)
     
-    lista_lucros_anuais = tk.Listbox(frame_anual, width=80, height=8, yscrollcommand=scrollbar_anual.set)
+    lista_lucros_anuais = tk.Listbox(frame_anual, width=80, height=12, yscrollcommand=scrollbar_anual.set)
     lista_lucros_anuais.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
     scrollbar_anual.config(command=lista_lucros_anuais.yview)
 

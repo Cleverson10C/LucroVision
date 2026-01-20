@@ -74,9 +74,10 @@ def abrir_dashboard():
         for produto, quantidade in mais_vendidos:
             tree_vendidos.insert("", tk.END, values=(produto, quantidade))
         
-        # Produtos próximos ao vencimento (próximos 60 dias)
-        data_60_dias = datetime.now() + timedelta(days=60)
-        ano_mes_limite = data_60_dias.strftime("%Y-%m")
+        # Produtos próximos ao vencimento (mês atual + 1 mês)
+        hoje = datetime.now()
+        proximo_mes = (hoje.replace(day=1) + timedelta(days=32)).replace(day=1)
+        ano_mes_limite = proximo_mes.strftime("%Y-%m")
         cursor.execute("""
             SELECT nome, validade, quantidade
             FROM produtos

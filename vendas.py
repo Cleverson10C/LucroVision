@@ -13,7 +13,7 @@ def tela_vendas():
     
     janela_vendas = tk.Toplevel()
     janela_vendas.title("Registrar Venda")
-    janela_vendas.geometry("800x680")
+    janela_vendas.geometry("850x780")
     janela_vendas.configure(bg="#f0f0f0")
     
     # Frame superior - Seleção de produto
@@ -58,22 +58,23 @@ def tela_vendas():
     frame_info = tk.LabelFrame(janela_vendas, text="Informações da Venda", 
                                font=("Arial", 11, "bold"), bg="white", padx=15, pady=15)
     frame_info.pack(pady=10, padx=20, fill=tk.X)
-    
+
     # Variáveis para armazenar informações
     produto_selecionado = {"id": None, "nome": "", "preco": 0.0, "estoque": 0}
-    
+    itens_venda = []  # Lista de itens da venda
+
     tk.Label(frame_info, text="Produto:", bg="white", font=("Arial", 10, "bold")).grid(row=0, column=0, sticky=tk.W, pady=5)
     label_produto_selecionado = tk.Label(frame_info, text="Nenhum produto selecionado", bg="white", font=("Arial", 10))
     label_produto_selecionado.grid(row=0, column=1, sticky=tk.W, padx=10, pady=5)
-    
+
     tk.Label(frame_info, text="Preço unitário:", bg="white", font=("Arial", 10, "bold")).grid(row=1, column=0, sticky=tk.W, pady=5)
     label_preco = tk.Label(frame_info, text="R$ 0,00", bg="white", font=("Arial", 10))
     label_preco.grid(row=1, column=1, sticky=tk.W, padx=10, pady=5)
-    
+
     tk.Label(frame_info, text="Estoque disponível:", bg="white", font=("Arial", 10, "bold")).grid(row=2, column=0, sticky=tk.W, pady=5)
     label_estoque = tk.Label(frame_info, text="0 unidades", bg="white", font=("Arial", 10))
     label_estoque.grid(row=2, column=1, sticky=tk.W, padx=10, pady=5)
-    
+
     # Campo de quantidade (padrão)
     tk.Label(frame_info, text="Quantidade:", bg="white", font=("Arial", 10, "bold")).grid(row=3, column=0, sticky=tk.W, pady=5)
     campo_quantidade = tk.Entry(frame_info, width=15, font=("Arial", 10))
@@ -100,12 +101,63 @@ def tela_vendas():
             campo_kg.delete(0, tk.END)
             campo_kg.insert(0, "0,100")
             calcular_total()
-    btn_menos = tk.Button(frame_info, text="-0,100kg", command=lambda: ajustar_kg(-0.1), width=8)
-    btn_mais = tk.Button(frame_info, text="+0,100kg", command=lambda: ajustar_kg(0.1), width=8)
-    btn_menos.grid(row=3, column=4, padx=2)
-    btn_mais.grid(row=3, column=5, padx=2)
-    btn_menos.grid_remove()
-    btn_mais.grid_remove()
+
+    
+    # Treeview para itens da venda com Scrollbar
+    colunas_venda = ("Nome", "Preço Unitário", "Quantidade", "Subtotal")
+    scrollbar_venda = tk.Scrollbar(frame_info)
+    scrollbar_venda.grid(row=5, column=6, sticky="ns", pady=(10, 0))
+    tabela_venda = ttk.Treeview(frame_info, columns=colunas_venda, show="headings", height=5, yscrollcommand=scrollbar_venda.set)
+    tabela_venda.grid(row=5, column=0, columnspan=6, sticky="ew", pady=(10, 0))
+    scrollbar_venda.config(command=tabela_venda.yview)
+    tabela_venda.heading("Nome", text="Produto")
+    tabela_venda.heading("Preço Unitário", text="Preço Unitário")
+    tabela_venda.heading("Quantidade", text="Quantidade")
+    tabela_venda.heading("Subtotal", text="Subtotal")
+    tabela_venda.column("Nome", width=180, anchor=tk.CENTER)
+    tabela_venda.column("Preço Unitário", width=100, anchor=tk.CENTER)
+    tabela_venda.column("Quantidade", width=80, anchor=tk.CENTER)
+    tabela_venda.column("Subtotal", width=100, anchor=tk.CENTER)
+
+    # Função para adicionar item à venda
+    def adicionar_item_venda():
+        if not produto_selecionado["id"]:
+            messagebox.showerror("Erro", "Selecione um produto para adicionar!")
+            return
+        try:
+            if campo_kg.winfo_ismapped():
+                quantidade = float(campo_kg.get().replace(",", "."))
+            else:
+                quantidade = int(campo_quantidade.get())
+            if quantidade <= 0:
+                messagebox.showerror("Erro", "A quantidade deve ser maior que zero!")
+                return
+            subtotal = produto_selecionado["preco"] * quantidade
+            # Adiciona na lista e na tabela
+            item = {
+                "id": produto_selecionado["id"],
+                "nome": produto_selecionado["nome"],
+                "preco": produto_selecionado["preco"],
+                "quantidade": quantidade,
+                "subtotal": subtotal
+            }
+            itens_venda.append(item)
+            tabela_venda.insert("", tk.END, values=(item["nome"], f"R$ {item['preco']:.2f}", item["quantidade"], f"R$ {item['subtotal']:.2f}"))
+            atualizar_total_venda()
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao adicionar item: {e}")
+
+    # Função para atualizar o total geral da venda
+    def atualizar_total_venda():
+        total = sum(item["subtotal"] for item in itens_venda)
+        total_formatado = f"R$ {total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        label_total.config(text=total_formatado)
+
+    # Botão para adicionar item à venda
+    botao_add_item = tk.Button(frame_info, text="Adicionar à Venda", command=adicionar_item_venda, bg="#2980b9", fg="white", font=("Arial", 10, "bold"))
+    botao_add_item.grid(row=3, column=4, padx=10, pady=5)
+    btn_menos = tk.Label(frame_info, text="-0,100kg", width=8)
+    btn_mais = tk.Label(frame_info, text="+0,100kg", width=8)
     
     def carregar_produtos(texto_filtro=""):
         """Carrega os produtos disponíveis no estoque"""
@@ -165,25 +217,21 @@ def tela_vendas():
                 campo_kg.grid()
                 label_kg.config(text="(Ex: 0,350 para 350g. Digite o peso em kg)")
                 label_kg.grid()
-                btn_menos.grid()
-                btn_mais.grid()
                 label_estoque.config(text=f"{produto_selecionado['estoque']} kg")
             else:
                 campo_quantidade.grid()
                 campo_kg.grid_remove()
                 label_kg.grid_remove()
-                btn_menos.grid_remove()
-                btn_mais.grid_remove()
                 label_estoque.config(text=f"{produto_selecionado['estoque']} unidades")
             calcular_total()
     
+
     # ====== CRIAÇÃO DO LABEL TOTAL =====
-    tk.Label(frame_info, text="Total:", bg="white", font=("Arial", 11, "bold")).grid(row=4, column=0, sticky=tk.W, pady=10)
+    tk.Label(frame_info, text="Total da Compra:", bg="white", font=("Arial", 11, "bold")).grid(row=6, column=0, sticky=tk.W, pady=10)
     label_total = tk.Label(frame_info, text="R$ 0,00", bg="white", font=("Arial", 14, "bold"), fg="#27ae60")
-    label_total.grid(row=4, column=1, sticky=tk.W, padx=10, pady=10)
-    
+    label_total.grid(row=6, column=1, sticky=tk.W, padx=10, pady=10)
+
     def calcular_total():
-        nonlocal label_total
         try:
             if campo_kg.winfo_ismapped():
                 quantidade_digitada = float(campo_kg.get().replace(",", "."))
@@ -192,103 +240,71 @@ def tela_vendas():
             valor_total = produto_selecionado["preco"] * quantidade_digitada
             # Formatar para padrão brasileiro (R$ 1.234,56)
             total_formatado = f"R$ {valor_total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-            label_total.config(text=total_formatado)
+            # Mostra o total do item selecionado, não o total geral
         except:
-            label_total.config(text="R$ 0,00")
+            pass
     
     def buscar_produto(evento=None):
         """Busca produtos conforme o texto digitado"""
         texto_digitado = campo_busca.get()
         carregar_produtos(texto_digitado)
     
-    def registrar_venda():
-        """Registra a venda no banco de dados e atualiza o estoque"""
-        # Validar se há produto selecionado
-        if not produto_selecionado["id"]:
-            messagebox.showerror("Erro", "Selecione um produto para vender!")
-            return
-        
-        try:
-            if campo_kg.winfo_ismapped():
-                quantidade_para_vender = float(campo_kg.get().replace(",", "."))
-            else:
-                quantidade_para_vender = int(campo_quantidade.get())
-            
-            # Validar quantidade
-            if quantidade_para_vender <= 0:
-                messagebox.showerror("Erro", "A quantidade deve ser maior que zero!")
-                return
-            
-            # Validar estoque disponível
-            estoque_disponivel = produto_selecionado["estoque"]
-            if quantidade_para_vender > estoque_disponivel:
-                if campo_kg.winfo_ismapped():
-                    messagebox.showerror("Erro", f"Estoque insuficiente! Disponível: {estoque_disponivel} kg")
-                else:
-                    messagebox.showerror("Erro", f"Estoque insuficiente! Disponível: {estoque_disponivel} unidades")
-                return
-            
-            # Calcular total e confirmar venda
-            preco_unitario = produto_selecionado["preco"]
-            valor_total_venda = preco_unitario * quantidade_para_vender
-            
-            usuario_confirmou = messagebox.askyesno(
-                "Confirmar Venda",
-                f"Produto: {produto_selecionado['nome']}\n"
-                f"Quantidade: {quantidade_para_vender}\n"
-                f"Total: R$ {valor_total_venda:.2f}\n\n"
-                f"Confirmar venda?"
-            )
-            
-            if not usuario_confirmou:
-                return
-            
 
-            # Conectar ao banco e registrar venda
+    def registrar_venda():
+        """Registra a venda no banco de dados e atualiza o estoque para todos os itens da venda"""
+        if not itens_venda:
+            messagebox.showerror("Erro", "Adicione pelo menos um item à venda!")
+            return
+        try:
             conexao_banco = conectar()
             cursor_banco = conexao_banco.cursor()
-
-            # Inserir registro de venda
             data_venda_atual = datetime.now().strftime("%Y-%m-%d")
-            cursor_banco.execute("""
-                INSERT INTO vendas (produto_id, quantidade, data_venda)
-                VALUES (?, ?, ?)
-            """, (produto_selecionado["id"], quantidade_para_vender, data_venda_atual))
-
-            # Atualizar quantidade em estoque
-            cursor_banco.execute("""
-                UPDATE produtos 
-                SET quantidade = quantidade - ?
-                WHERE id = ?
-            """, (quantidade_para_vender, produto_selecionado["id"]))
-
+            total_geral = 0
+            for item in itens_venda:
+                # Validar estoque
+                cursor_banco.execute("SELECT quantidade FROM produtos WHERE id = ?", (item["id"],))
+                estoque_atual = cursor_banco.fetchone()
+                if not estoque_atual or item["quantidade"] > estoque_atual[0]:
+                    messagebox.showerror("Erro", f"Estoque insuficiente para o produto {item['nome']}! Disponível: {estoque_atual[0] if estoque_atual else 0}")
+                    conexao_banco.close()
+                    return
+            # Confirmação
+            total_geral = sum(i["subtotal"] for i in itens_venda)
+            usuario_confirmou = messagebox.askyesno(
+                "Confirmar Venda",
+                f"Itens: {len(itens_venda)}\nTotal: R$ {total_geral:.2f}\n\nConfirmar venda?")
+            if not usuario_confirmou:
+                conexao_banco.close()
+                return
+            # Registrar cada item
+            for item in itens_venda:
+                cursor_banco.execute("""
+                    INSERT INTO vendas (produto_id, quantidade, data_venda)
+                    VALUES (?, ?, ?)
+                """, (item["id"], item["quantidade"], data_venda_atual))
+                cursor_banco.execute("""
+                    UPDATE produtos SET quantidade = quantidade - ? WHERE id = ?
+                """, (item["quantidade"], item["id"]))
             conexao_banco.commit()
             conexao_banco.close()
-            
-            # Exibir mensagem de sucesso
-            messagebox.showinfo("Sucesso", f"Venda registrada com sucesso!\nTotal: R$ {valor_total_venda:.2f}")
-            
-            # Limpar seleção atual
+            messagebox.showinfo("Sucesso", f"Venda registrada com sucesso!\nTotal: R$ {total_geral:.2f}")
+            # Limpar seleção e itens
             produto_selecionado["id"] = None
             produto_selecionado["nome"] = ""
             produto_selecionado["preco"] = 0.0
             produto_selecionado["estoque"] = 0
-            
-            # Resetar interface
+            itens_venda.clear()
+            for i in tabela_venda.get_children():
+                tabela_venda.delete(i)
+            atualizar_total_venda()
             label_produto_selecionado.config(text="Nenhum produto selecionado")
             label_preco.config(text="R$ 0,00")
             label_estoque.config(text="0 unidades")
-            label_total.config(text="R$ 0,00")
             campo_quantidade.delete(0, tk.END)
             campo_quantidade.insert(0, "1")
             campo_kg.delete(0, tk.END)
             campo_kg.insert(0, "0,100")
-            
-            # Recarregar lista de produtos
             carregar_produtos()
-            
-        except ValueError:
-            messagebox.showerror("Erro", "Digite uma quantidade válida!")
         except Exception as erro_exception:
             messagebox.showerror("Erro", f"Erro ao registrar venda: {str(erro_exception)}")
     
@@ -297,20 +313,20 @@ def tela_vendas():
     campo_busca.bind('<KeyRelease>', buscar_produto)
     campo_quantidade.bind('<KeyRelease>', lambda evento: calcular_total())
     campo_kg.bind('<KeyRelease>', lambda evento: calcular_total())
-    
+
     # Botões
     frame_botoes = tk.Frame(janela_vendas, bg="#f0f0f0")
     frame_botoes.pack(pady=20, padx=20)
-    
+
     botao_registrar = tk.Button(frame_botoes, text="💰 Registrar Venda", command=registrar_venda, 
                                 bg="#27ae60", fg="white", font=("Arial", 11, "bold"), 
                                 padx=35, pady=10, cursor="hand2", relief=tk.RAISED, borderwidth=2)
     botao_registrar.pack(side=tk.LEFT, padx=10)
-    
+
     botao_cancelar = tk.Button(frame_botoes, text="❌ Cancelar", command=janela_vendas.destroy, 
                                bg="#c0392b", fg="white", font=("Arial", 11, "bold"), 
                                padx=35, pady=10, cursor="hand2", relief=tk.RAISED, borderwidth=2)
     botao_cancelar.pack(side=tk.LEFT, padx=10)
-    
+
     # Carregar produtos inicialmente
     carregar_produtos()
