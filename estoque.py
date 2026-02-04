@@ -14,7 +14,7 @@ def tela_estoque():
     # Criar janela principal do estoque
     janela_estoque = tk.Toplevel()
     janela_estoque.title("Controle de Estoque")
-    janela_estoque.geometry("800x500")
+    janela_estoque.geometry("860x600")
 
     # Frame superior com título e filtros
     frame_superior = tk.Frame(janela_estoque)
@@ -144,12 +144,12 @@ def tela_estoque():
     tabela_produtos.heading("Validade", text="Validade")
 
     # Configurar largura das colunas
-    tabela_produtos.column("Nome", width=200)
-    tabela_produtos.column("Categoria", width=120)
-    tabela_produtos.column("Quantidade", width=80, anchor=tk.CENTER)
-    tabela_produtos.column("Estoque Mín.", width=80, anchor=tk.CENTER)
-    tabela_produtos.column("Preço", width=100, anchor=tk.CENTER)
-    tabela_produtos.column("Validade", width=100, anchor=tk.CENTER)
+    tabela_produtos.column("Nome", width=260, stretch=True)
+    tabela_produtos.column("Categoria", width=140, stretch=False)
+    tabela_produtos.column("Quantidade", width=100, anchor=tk.CENTER, stretch=False)
+    tabela_produtos.column("Estoque Mín.", width=100, anchor=tk.CENTER, stretch=False)
+    tabela_produtos.column("Preço", width=110, anchor=tk.CENTER, stretch=False)
+    tabela_produtos.column("Validade", width=110, anchor=tk.CENTER, stretch=False)
 
     # Configurar cores para destacar produtos
     tabela_produtos.tag_configure("estoque_baixo", background="#ffcccc")  # Vermelho claro para estoque baixo

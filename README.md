@@ -41,6 +41,7 @@ Sistema desenvolvido para facilitar o gerenciamento de estoque, permitindo contr
 ### 💰 Registro de Vendas
 - Interface intuitiva para registrar vendas
 - Busca de produtos em tempo real
+- Leitura de código de barras no campo "Código de barras" (Enter para buscar)
 - Cálculo automático do valor total
 - Validação de estoque disponível
 - Atualização automática do estoque após venda
@@ -49,6 +50,7 @@ Sistema desenvolvido para facilitar o gerenciamento de estoque, permitindo contr
 ### 📦 Cadastro de Produtos
 - Cadastro completo com:
   - Nome e categoria
+  - Código de barras (único)
   - Preços de custo e venda 
   - Quantidade em estoque
   - Estoque mínimo (para alertas)
@@ -157,8 +159,9 @@ python main.py
 **Registrar Venda:**
 1. Clique em "💰 Registrar Venda"
 2. Busque ou selecione o produto
-3. Digite a quantidade
-4. Confirme a venda
+3. Ou leia o código de barras no campo "Código de barras" e pressione Enter
+4. Digite a quantidade
+5. Confirme a venda
 
 **Cadastrar Produto:**
 1. Clique em "➕ Cadastrar Produto"
@@ -190,7 +193,6 @@ LucroVision/
 ├── cadastro_produto.py     # Cadastro de produtos
 ├── estoque.py              # Controle de estoque
 ├── relatorios.py           # Relatórios de lucratividade
-├── utils.py                # Funções utilitárias
 │
 ├── comercio.db             # Banco de dados (criado automaticamente)
 │
@@ -212,6 +214,7 @@ LucroVision/
 ```sql
 - id (INTEGER PRIMARY KEY)
 - nome (TEXT)
+- codigo_barras (TEXT UNIQUE)
 - categoria (TEXT)
 - preco_custo (REAL)
 - preco_venda (REAL)
@@ -252,18 +255,6 @@ LucroVision/
 - Listagem completa de produtos
 - Filtros e destaque visual
 - Estatísticas em tempo real
-
-## 🔧 Scripts Utilitários
-
-**Visualizar todo o banco:**
-```bash
-python visualizar_banco.py
-```
-
-**Verificar status:**
-```bash
-python verificar_banco.py
-```
 
 ## 📝 Convenções do Código
 
@@ -316,8 +307,8 @@ Desenvolvido por Cleverson
 
 ---
 
-**Versão:** 1.0.0  
-**Última atualização:** 30 de novembro de 2025
+**Versão:** 1.0.1  
+**Última atualização:** 4 de fevereiro de 2026
 
 ---
 

@@ -76,8 +76,10 @@ def tela_cadastro():
             
             # Preparar dados para inserção
             categoria_produto = campo_categoria.get().strip()
+            codigo_barras_produto = campo_codigo_barras.get().strip()
             dados_produto = (
                 nome_produto,
+                codigo_barras_produto,
                 categoria_produto,
                 preco_custo_produto,
                 preco_venda_produto,
@@ -92,12 +94,14 @@ def tela_cadastro():
 
             try:
                 cursor_banco.execute("""
-                    INSERT INTO produtos (nome, categoria, preco_custo, preco_venda, quantidade, estoque_minimo, validade)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO produtos (nome, codigo_barras, categoria, preco_custo, preco_venda, quantidade, estoque_minimo, validade)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """, dados_produto)
                 messagebox.showinfo("Sucesso", "Produto cadastrado com sucesso!")
             except Exception as e:
-                if "UNIQUE constraint failed" in str(e):
+                if "UNIQUE constraint failed: produtos.codigo_barras" in str(e):
+                    messagebox.showerror("Erro", "Código de barras já cadastrado para outro produto.")
+                elif "UNIQUE constraint failed" in str(e):
                     # Buscar dados atuais do produto
                     cursor_banco.execute("SELECT quantidade, preco_venda, preco_custo FROM produtos WHERE nome=?", (nome_produto,))
                     atual = cursor_banco.fetchone()
@@ -109,9 +113,10 @@ def tela_cadastro():
                     novo_preco_custo = ((qtd_atual * preco_custo_atual) + (quantidade_produto * preco_custo_produto)) / (qtd_atual + quantidade_produto)
                     # Atualiza o produto existente e a categoria
                     cursor_banco.execute("""
-                        UPDATE produtos SET categoria=?, preco_custo=?, preco_venda=?, quantidade=quantidade+?, estoque_minimo=?, validade=? WHERE nome=?
+                        UPDATE produtos SET categoria=?, codigo_barras=?, preco_custo=?, preco_venda=?, quantidade=quantidade+?, estoque_minimo=?, validade=? WHERE nome=?
                     """, (
                         categoria_produto,
+                        codigo_barras_produto,
                         novo_preco_custo,
                         novo_preco_venda,
                         quantidade_produto,
@@ -130,13 +135,14 @@ def tela_cadastro():
             messagebox.showerror("Erro", "Valores numéricos inválidos! Verifique os campos de preço e quantidade.")
     janela_cadastro = tk.Toplevel() 
     janela_cadastro.title("Cadastro de Produto")
-    janela_cadastro.geometry("380x530")
+    janela_cadastro.geometry("380x600")
     # janela_cadastro.resizable(False, False)
     
     # Definir campos do formulário
     campos_formulario = [
         ("Nome", "campo_nome"),
         ("Categoria", "campo_categoria"),
+        ("Código de Barras", "campo_codigo_barras"),
         ("Preço de Custo", "campo_preco_custo"),
         ("Preço de Venda", "campo_preco_venda"),
         ("Quantidade", "campo_quantidade"),
@@ -157,6 +163,7 @@ def tela_cadastro():
     # Atribuir campos a variáveis específicas
     campo_nome = campos_entrada["campo_nome"]
     campo_categoria = campos_entrada["campo_categoria"]
+    campo_codigo_barras = campos_entrada["campo_codigo_barras"]
     campo_preco_custo = campos_entrada["campo_preco_custo"]
     campo_preco_venda = campos_entrada["campo_preco_venda"]
     campo_quantidade = campos_entrada["campo_quantidade"]

@@ -22,6 +22,7 @@ def criar_tabelas():
     CREATE TABLE IF NOT EXISTS produtos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nome TEXT UNIQUE,
+        codigo_barras TEXT UNIQUE,
         categoria TEXT,
         preco_custo REAL,
         preco_venda REAL,

@@ -12,7 +12,7 @@ from PIL import Image, ImageTk
 def abrir_dashboard():
     janela = tk.Tk()
     janela.title("Painel de Gestão de Produtos — LucroVision")
-    janela.geometry("900x700")
+    janela.geometry("1100x700")
     # janela.resizable(True, True)
     janela.configure(bg="#f0f0f0")
 
@@ -161,8 +161,8 @@ def abrir_dashboard():
     tree_vendidos = ttk.Treeview(frame_vendidos, columns=("Produto", "Quantidade"), show="headings", height=6)
     tree_vendidos.heading("Produto", text="Produto")
     tree_vendidos.heading("Quantidade", text="Qtd Vendida")
-    tree_vendidos.column("Produto", width=200)
-    tree_vendidos.column("Quantidade", width=100, anchor=tk.CENTER)
+    tree_vendidos.column("Produto", width=240, stretch=True)
+    tree_vendidos.column("Quantidade", width=110, anchor=tk.CENTER, stretch=False)
     tree_vendidos.pack(fill=tk.BOTH, expand=True)
 
     # Coluna direita - Próximos ao vencimento
@@ -174,9 +174,9 @@ def abrir_dashboard():
     tree_vencimento.heading("Produto", text="Produto")
     tree_vencimento.heading("Validade", text="Validade")
     tree_vencimento.heading("Estoque", text="Estoque")
-    tree_vencimento.column("Produto", width=180)
-    tree_vencimento.column("Validade", width=100, anchor=tk.CENTER)
-    tree_vencimento.column("Estoque", width=80, anchor=tk.CENTER)
+    tree_vencimento.column("Produto", width=220, stretch=True)
+    tree_vencimento.column("Validade", width=110, anchor=tk.CENTER, stretch=False)
+    tree_vencimento.column("Estoque", width=90, anchor=tk.CENTER, stretch=False)
     tree_vencimento.pack(fill=tk.BOTH, expand=True)
 
     # ===== BOTÕES DE AÇÃO =====

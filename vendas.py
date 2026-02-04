@@ -13,7 +13,7 @@ def tela_vendas():
     
     janela_vendas = tk.Toplevel()
     janela_vendas.title("Registrar Venda")
-    janela_vendas.geometry("850x780")
+    janela_vendas.geometry("1200x780")
     janela_vendas.configure(bg="#f0f0f0")
     
     # Frame superior - Seleção de produto
@@ -25,6 +25,11 @@ def tela_vendas():
     tk.Label(frame_superior, text="Buscar produto:", bg="white", font=("Arial", 10)).grid(row=0, column=0, sticky=tk.W, pady=5)
     campo_busca = tk.Entry(frame_superior, width=40, font=("Arial", 10))
     campo_busca.grid(row=0, column=1, padx=10, pady=5)
+
+    # Campo de leitura de código de barras
+    tk.Label(frame_superior, text="Código de barras:", bg="white", font=("Arial", 10)).grid(row=0, column=2, sticky=tk.W, padx=(10, 0), pady=5)
+    campo_codigo_barras = tk.Entry(frame_superior, width=14, font=("Arial", 10))
+    campo_codigo_barras.grid(row=0, column=3, padx=10, pady=5)
     
     # Lista de produtos disponíveis
     tk.Label(frame_superior, text="Produtos disponíveis:", bg="white", font=("Arial", 10)).grid(row=1, column=0, columnspan=2, sticky=tk.W, pady=(10, 5))
@@ -35,7 +40,7 @@ def tela_vendas():
     scrollbar_produtos = tk.Scrollbar(frame_lista)
     scrollbar_produtos.pack(side=tk.RIGHT, fill=tk.Y)
     
-    colunas_produtos = ("ID", "Nome", "Categoria", "Estoque", "Preço")
+    colunas_produtos = ("ID", "Nome", "Categoria", "Estoque", "Preço", "Código de barras")
     tabela_produtos = ttk.Treeview(frame_lista, columns=colunas_produtos, show="headings", 
                                    height=6, yscrollcommand=scrollbar_produtos.set)
     scrollbar_produtos.config(command=tabela_produtos.yview)
@@ -45,12 +50,14 @@ def tela_vendas():
     tabela_produtos.heading("Categoria", text="Categoria")
     tabela_produtos.heading("Estoque", text="Estoque")
     tabela_produtos.heading("Preço", text="Preço Unit.")
+    tabela_produtos.heading("Código de barras", text="Código de barras")
     
-    tabela_produtos.column("ID", width=40, anchor=tk.CENTER)
-    tabela_produtos.column("Nome", width=250)
-    tabela_produtos.column("Categoria", width=120)
-    tabela_produtos.column("Estoque", width=80, anchor=tk.CENTER)
-    tabela_produtos.column("Preço", width=100, anchor=tk.CENTER)
+    tabela_produtos.column("ID", width=50, anchor=tk.CENTER, stretch=False)
+    tabela_produtos.column("Nome", width=260, stretch=True)
+    tabela_produtos.column("Categoria", width=140, stretch=False)
+    tabela_produtos.column("Estoque", width=90, anchor=tk.CENTER, stretch=False)
+    tabela_produtos.column("Preço", width=110, anchor=tk.CENTER, stretch=False)
+    tabela_produtos.column("Código de barras", width=140, anchor=tk.CENTER, stretch=False)
     
     tabela_produtos.pack(fill=tk.BOTH, expand=True)
     
@@ -60,7 +67,7 @@ def tela_vendas():
     frame_info.pack(pady=10, padx=20, fill=tk.X)
 
     # Variáveis para armazenar informações
-    produto_selecionado = {"id": None, "nome": "", "preco": 0.0, "estoque": 0}
+    produto_selecionado = {"id": None, "nome": "", "preco": 0.0, "estoque": 0, "categoria": "", "codigo_barras": ""}
     itens_venda = []  # Lista de itens da venda
 
     tk.Label(frame_info, text="Produto:", bg="white", font=("Arial", 10, "bold")).grid(row=0, column=0, sticky=tk.W, pady=5)
@@ -104,7 +111,7 @@ def tela_vendas():
 
     
     # Treeview para itens da venda com Scrollbar
-    colunas_venda = ("Nome", "Preço Unitário", "Quantidade", "Subtotal")
+    colunas_venda = ("Nome", "Preço Unitário", "Quantidade", "Subtotal", "Código de barras")
     scrollbar_venda = tk.Scrollbar(frame_info)
     scrollbar_venda.grid(row=5, column=6, sticky="ns", pady=(10, 0))
     tabela_venda = ttk.Treeview(frame_info, columns=colunas_venda, show="headings", height=5, yscrollcommand=scrollbar_venda.set)
@@ -114,10 +121,12 @@ def tela_vendas():
     tabela_venda.heading("Preço Unitário", text="Preço Unitário")
     tabela_venda.heading("Quantidade", text="Quantidade")
     tabela_venda.heading("Subtotal", text="Subtotal")
-    tabela_venda.column("Nome", width=180, anchor=tk.CENTER)
-    tabela_venda.column("Preço Unitário", width=100, anchor=tk.CENTER)
-    tabela_venda.column("Quantidade", width=80, anchor=tk.CENTER)
-    tabela_venda.column("Subtotal", width=100, anchor=tk.CENTER)
+    tabela_venda.heading("Código de barras", text="Código de barras")
+    tabela_venda.column("Nome", width=220, anchor=tk.CENTER, stretch=True)
+    tabela_venda.column("Preço Unitário", width=110, anchor=tk.CENTER, stretch=False)
+    tabela_venda.column("Quantidade", width=90, anchor=tk.CENTER, stretch=False)
+    tabela_venda.column("Subtotal", width=110, anchor=tk.CENTER, stretch=False)
+    tabela_venda.column("Código de barras", width=140, anchor=tk.CENTER, stretch=False)
 
     # Função para adicionar item à venda
     def adicionar_item_venda():
@@ -139,10 +148,21 @@ def tela_vendas():
                 "nome": produto_selecionado["nome"],
                 "preco": produto_selecionado["preco"],
                 "quantidade": quantidade,
-                "subtotal": subtotal
+                "subtotal": subtotal,
+                "codigo_barras": produto_selecionado["codigo_barras"],
             }
             itens_venda.append(item)
-            tabela_venda.insert("", tk.END, values=(item["nome"], f"R$ {item['preco']:.2f}", item["quantidade"], f"R$ {item['subtotal']:.2f}"))
+            tabela_venda.insert(
+                "",
+                tk.END,
+                values=(
+                    item["nome"],
+                    f"R$ {item['preco']:.2f}",
+                    item["quantidade"],
+                    f"R$ {item['subtotal']:.2f}",
+                    item["codigo_barras"],
+                ),
+            )
             atualizar_total_venda()
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao adicionar item: {e}")
@@ -171,14 +191,14 @@ def tela_vendas():
         # Buscar com filtro ou todos os produtos
         if texto_filtro:
             cursor_banco.execute("""
-                SELECT id, nome, categoria, quantidade, preco_venda 
+                SELECT id, nome, categoria, quantidade, preco_venda, codigo_barras
                 FROM produtos 
                 WHERE quantidade > 0 AND nome LIKE ?
                 ORDER BY nome ASC
             """, (f"%{texto_filtro}%",))
         else:
             cursor_banco.execute("""
-                SELECT id, nome, categoria, quantidade, preco_venda 
+                SELECT id, nome, categoria, quantidade, preco_venda, codigo_barras
                 FROM produtos 
                 WHERE quantidade > 0
                 ORDER BY nome ASC
@@ -189,41 +209,61 @@ def tela_vendas():
         
         # Preencher tabela com produtos
         for dados_produto in lista_produtos_disponiveis:
-            id_produto, nome_produto, categoria_produto, quantidade_estoque, preco_unitario = dados_produto
+            id_produto, nome_produto, categoria_produto, quantidade_estoque, preco_unitario, codigo_barras = dados_produto
             preco_formatado = f"R$ {preco_unitario:.2f}"
-            tabela_produtos.insert("", tk.END, values=(id_produto, nome_produto, categoria_produto, quantidade_estoque, preco_formatado))
+            tabela_produtos.insert(
+                "",
+                tk.END,
+                values=(
+                    id_produto,
+                    nome_produto,
+                    categoria_produto,
+                    quantidade_estoque,
+                    preco_formatado,
+                    codigo_barras,
+                ),
+            )
     
+    def aplicar_produto_selecionado(id_produto, nome_produto, categoria_produto, quantidade_estoque, preco_unitario, codigo_barras):
+        produto_selecionado["id"] = id_produto
+        produto_selecionado["nome"] = nome_produto
+        produto_selecionado["estoque"] = quantidade_estoque
+        produto_selecionado["preco"] = float(preco_unitario)
+        produto_selecionado["categoria"] = categoria_produto
+        produto_selecionado["codigo_barras"] = codigo_barras
+
+        # Atualizar labels com as informações
+        label_produto_selecionado.config(text=produto_selecionado["nome"])
+        label_preco.config(text=f"R$ {produto_selecionado['preco']:.2f}")
+        categorias_kg = ["carnes", "frios", "padaria", "hortifruti"]
+        if categoria_produto.lower() in categorias_kg:
+            campo_quantidade.grid_remove()
+            campo_kg.grid()
+            label_kg.config(text="(Ex: 0,350 para 350g. Digite o peso em kg)")
+            label_kg.grid()
+            label_estoque.config(text=f"{produto_selecionado['estoque']} kg")
+        else:
+            campo_quantidade.grid()
+            campo_kg.grid_remove()
+            label_kg.grid_remove()
+            label_estoque.config(text=f"{produto_selecionado['estoque']} unidades")
+        calcular_total()
+
     def ao_selecionar_produto(evento):
         """Atualiza as informações quando um produto é selecionado"""
         item_selecionado = tabela_produtos.selection()
         if item_selecionado:
             dados_item = tabela_produtos.item(item_selecionado[0])
             valores_produto = dados_item['values']
-            
-            # Armazenar informações do produto selecionado
-            produto_selecionado["id"] = valores_produto[0]
-            produto_selecionado["nome"] = valores_produto[1]
-            produto_selecionado["estoque"] = valores_produto[3]
             preco_texto = valores_produto[4].replace("R$ ", "").replace(",", ".")
-            produto_selecionado["preco"] = float(preco_texto)
-            
-            # Atualizar labels com as informações
-            label_produto_selecionado.config(text=produto_selecionado["nome"])
-            label_preco.config(text=valores_produto[4])
-            # Verifica se é categoria que usa kg
-            categorias_kg = ["carnes", "frios", "padaria", "hortifruti"]
-            if valores_produto[2].lower() in categorias_kg:
-                campo_quantidade.grid_remove()
-                campo_kg.grid()
-                label_kg.config(text="(Ex: 0,350 para 350g. Digite o peso em kg)")
-                label_kg.grid()
-                label_estoque.config(text=f"{produto_selecionado['estoque']} kg")
-            else:
-                campo_quantidade.grid()
-                campo_kg.grid_remove()
-                label_kg.grid_remove()
-                label_estoque.config(text=f"{produto_selecionado['estoque']} unidades")
-            calcular_total()
+            aplicar_produto_selecionado(
+                valores_produto[0],
+                valores_produto[1],
+                valores_produto[2],
+                valores_produto[3],
+                preco_texto,
+                valores_produto[5],
+            )
     
 
     # ====== CRIAÇÃO DO LABEL TOTAL =====
@@ -248,6 +288,47 @@ def tela_vendas():
         """Busca produtos conforme o texto digitado"""
         texto_digitado = campo_busca.get()
         carregar_produtos(texto_digitado)
+
+    def buscar_por_codigo(evento=None):
+        codigo = campo_codigo_barras.get().strip()
+        if not codigo:
+            return
+        conexao_banco = conectar()
+        cursor_banco = conexao_banco.cursor()
+        cursor_banco.execute("""
+            SELECT id, nome, categoria, quantidade, preco_venda, codigo_barras
+            FROM produtos 
+            WHERE codigo_barras = ?
+        """, (codigo,))
+        resultado = cursor_banco.fetchone()
+        conexao_banco.close()
+
+        if not resultado:
+            messagebox.showerror("Erro", "Código de barras não encontrado.")
+            campo_codigo_barras.delete(0, tk.END)
+            campo_codigo_barras.focus_set()
+            return
+
+        id_produto, nome_produto, categoria_produto, quantidade_estoque, preco_unitario, codigo_barras = resultado
+        aplicar_produto_selecionado(
+            id_produto,
+            nome_produto,
+            categoria_produto,
+            quantidade_estoque,
+            preco_unitario,
+            codigo_barras,
+        )
+
+        categorias_kg = ["carnes", "frios", "padaria", "hortifruti"]
+        if categoria_produto.lower() in categorias_kg:
+            campo_kg.focus_set()
+        else:
+            campo_quantidade.delete(0, tk.END)
+            campo_quantidade.insert(0, "1")
+            adicionar_item_venda()
+
+        campo_codigo_barras.delete(0, tk.END)
+        campo_codigo_barras.focus_set()
     
 
     def registrar_venda():
@@ -293,6 +374,7 @@ def tela_vendas():
             produto_selecionado["nome"] = ""
             produto_selecionado["preco"] = 0.0
             produto_selecionado["estoque"] = 0
+            produto_selecionado["codigo_barras"] = ""
             itens_venda.clear()
             for i in tabela_venda.get_children():
                 tabela_venda.delete(i)
@@ -311,6 +393,7 @@ def tela_vendas():
     # Vincular eventos aos componentes
     tabela_produtos.bind('<<TreeviewSelect>>', ao_selecionar_produto)
     campo_busca.bind('<KeyRelease>', buscar_produto)
+    campo_codigo_barras.bind('<Return>', buscar_por_codigo)
     campo_quantidade.bind('<KeyRelease>', lambda evento: calcular_total())
     campo_kg.bind('<KeyRelease>', lambda evento: calcular_total())
 
@@ -330,3 +413,4 @@ def tela_vendas():
 
     # Carregar produtos inicialmente
     carregar_produtos()
+    campo_codigo_barras.focus_set()
