@@ -130,7 +130,7 @@ def tela_cadastro():
             messagebox.showerror("Erro", "Valores numéricos inválidos! Verifique os campos de preço e quantidade.")
     janela_cadastro = tk.Toplevel() 
     janela_cadastro.title("Cadastro de Produto")
-    janela_cadastro.geometry("380x480")
+    janela_cadastro.geometry("380x530")
     # janela_cadastro.resizable(False, False)
     
     # Definir campos do formulário

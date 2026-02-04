@@ -4,47 +4,54 @@ from database import conectar
 import dashboard
 import requests
 
-# def acesso_permitido(licenca):
-#     try:
-#         # Agora sem headers e sem token
-#         requisicao = requests.get('https://servidor-licencas-5g4e.onrender.com/')
-#         LICENCA_ESPECIFICA = 'WOSNJ-ORKPT-F7ZQQ-BXJYM-Y7B1X'
-#         if requisicao.status_code == 200 and requisicao.text:
-#             resultado = requisicao.json()
-#             if 'Licenças' in resultado:
-#                 licencas_validas = [item['licenca'] for item in resultado['Licenças']]
-#                 if licenca == LICENCA_ESPECIFICA and licenca in licencas_validas:
-#                     return True
-#                 else:
-#                     return False
-#             else:
-#                 return False
-#         else:
-#             return False
-#     except Exception as e:
-#         return False
+def acesso_permitido(licenca):
+    try:
+        # Agora sem headers e sem token
+        requisicao = requests.get('https://api-licencas-9ur1.onrender.com/licenses')
+        LICENCA_ESPECIFICA = 'DZOD8-PNOO6-DESMA-7IC60-LUMR2'
+        if requisicao.status_code == 200 and requisicao.text:
+            resultado = requisicao.json()
+            licencas_validas = []
+                # Se for dicionário com 'Licenças'
+            if isinstance(resultado, dict) and 'Licenças' in resultado:
+                licencas_validas = [item.get('licença') or item.get('licenca') for item in resultado['Licenças']]
+                # Se for lista de licenças
+            elif isinstance(resultado, list):
+                licencas_validas = [item.get('licenca') or item.get('licença') for item in resultado]
+                print(f"Licença digitada: {licenca}")
+                if licenca == LICENCA_ESPECIFICA and licenca in licencas_validas:
+                    print("Licença correta e encontrada na lista.")
+                    return True
+                else:
+                    return False
+            else:
+                return False
+        else:
+            return False
+    except Exception as e:
+        return False
 
-# # Janela para pedir a licença
-# class LicencaDialog(tk.Tk):
-#     def __init__(self):
-#         super().__init__()
-#         self.title("Licença de acesso")
-#         self.geometry("350x150")
-#         # self.resizable(False, False)
-#         self.licenca = None
+# Janela para pedir a licença
+class LicencaDialog(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self.title("Licença de acesso")
+        self.geometry("350x140")
+        # self.resizable(False, False)
+        self.licenca = None
 
-#         self.label = tk.Label(self, text="Digite sua licença de acesso:", font=("Arial", 11))
-#         self.label.pack(pady=10)
+        self.label = tk.Label(self, text="Digite sua licença de acesso:", font=("Arial", 12))
+        self.label.pack(pady=10)
 
-#         self.entry = tk.Entry(self, width=32)
-#         self.entry.pack(pady=5)
+        self.entry = tk.Entry(self, width=31)
+        self.entry.pack(pady=5)
 
-#         self.button = tk.Button(self, text="Validar", bg="#3498db", fg="white",  font=("Arial", 10, "bold"), command=self.validar)
-#         self.button.pack(pady=10)
+        self.button = tk.Button(self, text="Validar", bg="#3498db", fg="white",  font=("Arial", 10, "bold"), command=self.validar)
+        self.button.pack(pady=10)
 
-#     def validar(self):
-#         self.licenca = self.entry.get()
-#         self.destroy()
+    def validar(self):
+        self.licenca = self.entry.get()
+        self.destroy()
 
 
 def verificar_login(usuario, senha):
@@ -139,14 +146,14 @@ def cadastrar_usuario():
 def tela_login():
     """Cria e exibe a tela de login do sistema"""
     
-    # Validar licença primeiro
-    # dialog = LicencaDialog()
-    # dialog.mainloop()
-    # licenca = dialog.licenca
+   # Validar licença primeiro
+    dialog = LicencaDialog()
+    dialog.mainloop()
+    licenca = dialog.licenca
     
-    # if not licenca or not acesso_permitido(licenca):
-    #     messagebox.showerror("Erro", "Licença inválida! Acesso negado.")
-    #     return
+    if not licenca or not acesso_permitido(licenca):
+        messagebox.showerror("Erro", "Licença inválida! Acesso negado.")
+        return
     
     def autenticar_usuario():
         """Valida as credenciais e abre o dashboard se correto"""

@@ -12,3 +12,4 @@ if __name__ == "__main__":
     
     # Abrir tela de login do sistema (com validação de licença incluída)
     tela_login()
+    

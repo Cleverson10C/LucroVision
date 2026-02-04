@@ -9,9 +9,9 @@ build_exe_options = {
 }
 
 # Detecta base correta para ocultar console no Windows
-# base = None
-# if sys.platform == "win32":
-#     base = "Win32GUI"
+base = None
+if sys.platform == "win32":
+    base = "gui"   # em versões novas do cx_Freeze
 
 # Configuração do executável
 setup(
@@ -19,7 +19,12 @@ setup(
     version="1.0",
     description="Sistema de Gerenciamento de Estoque Inteligente",
     options={"build_exe": build_exe_options},
-    executables=[Executable("main.py", target_name="LucroVisor.exe")]
+    executables=[
+        Executable(
+            "main.py",
+            base=base,
+            target_name="LucroVisor.exe",
+            icon="Logo.ico"   
+        )
+    ]
 )
-
-

@@ -183,17 +183,49 @@ def abrir_dashboard():
     frame_botoes = tk.Frame(frame_main, bg="#f0f0f0")
     frame_botoes.pack(fill=tk.X)
 
-    def criar_botao(parent, texto, comando, cor):
-        btn = tk.Button(parent, text=texto, command=comando, bg=cor, fg="white", 
+    def criar_botao(parent, texto, comando, cor, desabilitar_apos_clique=False, reabilitar_ao_fechar=False):
+        def _comando_wrapper():
+            if desabilitar_apos_clique:
+                btn.config(state=tk.DISABLED)
+            filhos_antes = set(janela.winfo_children())
+            root_antes = getattr(tk, "_default_root", None)
+            resultado = comando()
+            if reabilitar_ao_fechar:
+                janela_alvo = None
+                if isinstance(resultado, (tk.Toplevel, tk.Tk)):
+                    janela_alvo = resultado
+                else:
+                    filhos_depois = set(janela.winfo_children())
+                    novas_janelas = [
+                        w for w in filhos_depois
+                        if w not in filhos_antes and isinstance(w, tk.Toplevel)
+                    ]
+                    if novas_janelas:
+                        janela_alvo = novas_janelas[-1]
+                    else:
+                        root_depois = getattr(tk, "_default_root", None)
+                        if root_depois is not root_antes and isinstance(root_depois, tk.Tk):
+                            janela_alvo = root_depois
+
+                if janela_alvo is not None:
+                    def _on_destroy(event):
+                        if event.widget is janela_alvo:
+                            btn.config(state=tk.NORMAL)
+
+                    janela_alvo.bind("<Destroy>", _on_destroy)
+                elif desabilitar_apos_clique:
+                    btn.config(state=tk.NORMAL)
+
+        btn = tk.Button(parent, text=texto, command=_comando_wrapper, bg=cor, fg="white", 
                        font=("Arial", 9, "bold"), relief=tk.RAISED, borderwidth=2,
                        cursor="hand2", padx=10, pady=8, wraplength=100)
         btn.pack(side=tk.LEFT, padx=5, expand=True, fill=tk.BOTH)
         return btn
 
-    criar_botao(frame_botoes, "💰 Registrar Venda", vendas.tela_vendas, "#e67e22")
-    criar_botao(frame_botoes, "➕ Cadastrar Produto", cadastro_produto.tela_cadastro, "#27ae60")
-    criar_botao(frame_botoes, "📦 Ver Estoque", estoque.tela_estoque, "#2980b9")
-    criar_botao(frame_botoes, "📊 Relatórios", relatorios.tela_relatorios, "#8e44ad")
+    criar_botao(frame_botoes, "💰 Registrar Venda", vendas.tela_vendas, "#e67e22", desabilitar_apos_clique=True, reabilitar_ao_fechar=True)
+    criar_botao(frame_botoes, "➕ Cadastrar Produto", cadastro_produto.tela_cadastro, "#27ae60", desabilitar_apos_clique=True, reabilitar_ao_fechar=True)
+    criar_botao(frame_botoes, "📦 Ver Estoque", estoque.tela_estoque, "#2980b9", desabilitar_apos_clique=True, reabilitar_ao_fechar=True)
+    criar_botao(frame_botoes, "📊 Relatórios", relatorios.tela_relatorios, "#8e44ad", desabilitar_apos_clique=True, reabilitar_ao_fechar=True)
     criar_botao(frame_botoes, "🔄 Atualizar Dados", atualizar_dashboard, "#f39c12")
     criar_botao(frame_botoes, "🚪 Sair do Sistema", janela.destroy, "#c0392b")
 
