@@ -5,7 +5,7 @@ from cx_Freeze import setup, Executable
 # Configuração das opções de build
 build_exe_options = {
     "packages": ["tkinter", "sqlite3"],
-    "include_files": ["comercio.db", "licenca.txt"],  # Adicione outros arquivos necessários
+    "include_files": ["licenca.txt", "Logo.png", "Logo.ico"],  # Arquivos estáticos (não incluir banco)
 }
 
 # Detecta base correta para ocultar console no Windows
@@ -24,7 +24,7 @@ setup(
             "main.py",
             base=base,
             target_name="LucroVisor.exe",
-            icon="Logo.ico"   
+            icon="Logo.ico"
         )
     ]
 )

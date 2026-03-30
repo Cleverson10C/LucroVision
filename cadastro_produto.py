@@ -4,6 +4,11 @@ from database import conectar
 
 def tela_cadastro():
     """Cria e exibe a tela de cadastro de produtos"""
+
+    def normalizar_categoria(categoria_texto):
+        """Padroniza categoria para evitar duplicidade por maiúscula/minúscula."""
+        categoria_limpa = " ".join(categoria_texto.strip().split())
+        return categoria_limpa.title()
     
     def converter_valor_monetario(valor_texto):
         """Converte string para float, aceitando vírgula ou ponto como separador decimal"""
@@ -75,8 +80,11 @@ def tela_cadastro():
                 return
             
             # Preparar dados para inserção
-            categoria_produto = campo_categoria.get().strip()
-            codigo_barras_produto = campo_codigo_barras.get().strip()
+            categoria_produto = normalizar_categoria(campo_categoria.get())
+            codigo_barras_informado = campo_codigo_barras.get().strip()
+            # Em SQLite, UNIQUE permite vários NULL, mas não permite vários "".
+            # Por isso, quando o campo está vazio, salvamos como NULL.
+            codigo_barras_produto = codigo_barras_informado if codigo_barras_informado else None
             dados_produto = (
                 nome_produto,
                 codigo_barras_produto,
@@ -113,7 +121,15 @@ def tela_cadastro():
                     novo_preco_custo = ((qtd_atual * preco_custo_atual) + (quantidade_produto * preco_custo_produto)) / (qtd_atual + quantidade_produto)
                     # Atualiza o produto existente e a categoria
                     cursor_banco.execute("""
-                        UPDATE produtos SET categoria=?, codigo_barras=?, preco_custo=?, preco_venda=?, quantidade=quantidade+?, estoque_minimo=?, validade=? WHERE nome=?
+                        UPDATE produtos
+                        SET categoria=?,
+                            codigo_barras=COALESCE(?, codigo_barras),
+                            preco_custo=?,
+                            preco_venda=?,
+                            quantidade=quantidade+?,
+                            estoque_minimo=?,
+                            validade=?
+                        WHERE nome=?
                     """, (
                         categoria_produto,
                         codigo_barras_produto,
@@ -124,7 +140,7 @@ def tela_cadastro():
                         data_validade_convertida,
                         nome_produto
                     ))
-                    messagebox.showinfo("Sucesso", f"Produto atualizado! Categoria definida como '{campo_categoria.get()}'. Quantidade somada ao estoque. Preço de venda e custo ajustados pela média ponderada.")
+                    messagebox.showinfo("Sucesso", f"Produto atualizado! Categoria definida como '{categoria_produto}'. Quantidade somada ao estoque. Preço de venda e custo ajustados pela média ponderada.")
                 else:
                     messagebox.showerror("Erro", f"Erro ao cadastrar produto: {str(e)}")
             conexao_banco.commit()

@@ -1,328 +1,139 @@
-# 📊 LucroVision - Sistema de Gerenciamento de Estoque Inteligente
+# LucroVision
 
-Sistema completo de gerenciamento para estoque desenvolvido em Python com interface gráfica Tkinter e banco de dados SQLite.
+Sistema desktop de gerenciamento de estoque e vendas em Python, com interface Tkinter e banco SQLite.
 
-## 📋 Índice
+## Visão geral
 
-- [Sobre o Projeto](#sobre-o-projeto)
-- [Funcionalidades](#funcionalidades)
-- [Tecnologias](#tecnologias)
-- [Requisitos](#requisitos)
-- [Instalação](#instalação)
-- [Como Usar](#como-usar)
-- [Estrutura do Projeto](#estrutura-do-projeto)
-- [Banco de Dados](#banco-de-dados)
-- [Credenciais Padrão](#credenciais-padrão)
-- [Capturas de Tela](#capturas-de-tela)
+O LucroVision centraliza operações de cadastro de produtos, controle de estoque, registro de vendas e visualização de indicadores de desempenho.
 
-## 🎯 Sobre o Projeto
+## Funcionalidades
 
-Sistema desenvolvido para facilitar o gerenciamento de estoque, permitindo controle completo de estoque, vendas, cadastro de produtos e geração de relatórios de lucratividade.
-
-## ✨ Funcionalidades
-
-### 🔐 Sistema de Login
-- Cadastro e autenticação de funcionários com nome e senha dinâmicos
-- Senha criptografada
-- Controle de acesso ao sistema
-
-### 📊 Dashboard Interativo
-- **5 Cards de Estatísticas:**
-  - Total de produtos cadastrados
-  - Alertas de estoque baixo
+- Login com cadastro de usuários (tabela `funcionarios`)
+- Dashboard com métricas em tempo real:
+  - Total de produtos
+  - Produtos com estoque baixo
   - Total de itens em estoque
-  - Vendas do mês atual
-  - Valor total em estoque
-- **Análises em Tempo Real:**
-  - Produtos mais vendidos (últimos 30 dias)
-  - Produtos próximos ao vencimento
-- **Botões de Acesso Rápido** para todas as funcionalidades
+  - Vendas no mês
+  - Valor estimado do estoque
+- Ranking de produtos mais vendidos (últimos 30 dias)
+- Lista de produtos próximos ao vencimento
+- Cadastro de produtos com validações:
+  - Nome, categoria, código de barras, preços, quantidade, estoque mínimo e validade
+  - Conversão de validade `MM/YYYY` para `YYYY-MM`
+  - Atualização de produto existente por nome com média ponderada de preço
+- Registro de vendas:
+  - Busca por nome
+  - Leitura por código de barras
+  - Venda com múltiplos itens
+  - Atualização automática do estoque
+- Controle de estoque com filtros por status e categoria
+- Relatórios de lucratividade mensal e anual
 
-### 💰 Registro de Vendas
-- Interface intuitiva para registrar vendas
-- Busca de produtos em tempo real
-- Leitura de código de barras no campo "Código de barras" (Enter para buscar)
-- Cálculo automático do valor total
-- Validação de estoque disponível
-- Atualização automática do estoque após venda
-- Confirmação de venda com resumo
+## Tecnologias
 
-### 📦 Cadastro de Produtos
-- Cadastro completo com:
-  - Nome e categoria
-  - Código de barras (único)
-  - Preços de custo e venda 
-  - Quantidade em estoque
-  - Estoque mínimo (para alertas)
-  - Validade (formato MM/YYYY)
-- Validações de dados
-- Mensagens de erro descritivas
+- Python 3
+- Tkinter
+- SQLite3
+- Pillow (logo no dashboard)
+- Requests (código de licença está comentado no momento)
 
-### 📋 Controle de Estoque
-- Visualização em tabela de todos os produtos
-- Filtros:
-  - Todos os produtos
-  - Apenas produtos com estoque baixo
-- Destaque visual para produtos com estoque crítico
-- Informações completas:
-  - Nome, categoria, quantidade
-  - Estoque mínimo, preço, validade
-- Estatísticas em tempo real
+## Requisitos
 
-### 📈 Relatórios de Lucratividade
-- Lucro mensal detalhado
-- Lucro anual consolidado
-- Cálculo automático baseado em vendas
-- Diferença entre preço de custo e venda
+- Python 3.10+
+- `pip`
 
-## 🛠️ Tecnologias
+## Instalação
 
-- **Python 3.13**
-- **Tkinter** - Interface gráfica
-- **SQLite3** - Banco de dados
-- **datetime** - Manipulação de datas
+1. Clone o projeto:
 
-## 📦 Requisitos
-
-- Python 3.8 ou superior
-- Tkinter (geralmente incluído no Python)
-- SQLite3 (incluído no Python)
-
-### Instalação do Python
-
-**Windows:**
 ```bash
-# Baixe em: https://www.python.org/downloads/
-# Durante a instalação, marque "Add Python to PATH"
+git clone <url-do-seu-repositorio>
+cd LucroVision
 ```
 
-**Linux:**
-```bash
-sudo apt-get update
-sudo apt-get install python3 python3-tk
-```
+2. Crie e ative um ambiente virtual (recomendado):
 
-**macOS:**
-```bash
-brew install python-tk
-```
-
-## 🚀 Instalação
-
-git clone https://github.com/seu-usuario/LucroVisor.git
-1. **Clone ou baixe o projeto:**
-```bash
-git clone https://github.com/seu-usuario/LucroVisor.git
-cd LucroVisor
-```
-
-2. **Verifique se o Python está instalado:**
-```bash
-python --version
-```
-
-3. **Crie e ative o ambiente virtual (Windows):**
 ```powershell
 python -m venv venv
 .\venv\Scripts\Activate.ps1
 ```
 
-4. **Instale as dependências (se houver requirements.txt):**
+3. Instale dependências:
+
 ```powershell
 pip install -r requirements.txt
 ```
 
-5. **Execute o sistema:**
+## Como executar
+
 ```powershell
 python main.py
 ```
 
-## 💻 Como Usar
+Na primeira execução, as tabelas do banco são criadas automaticamente.
 
-### Primeira Execução
+## Estrutura do projeto
 
-1. Execute o arquivo `main.py`
-2. O sistema criará automaticamente:
-   - Banco de dados `comercio.db`
-   - Tabelas necessárias
-   - Permite cadastrar o primeiro funcionário
-
-3. Faça login com o funcionário cadastrado:
-   - Informe o nome de usuário e senha definidos no cadastro
-
-### Navegação
-
-**Dashboard Principal:**
-- Visualize estatísticas gerais
-- Acesse todas as funcionalidades pelos botões
-
-**Registrar Venda:**
-1. Clique em "💰 Registrar Venda"
-2. Busque ou selecione o produto
-3. Ou leia o código de barras no campo "Código de barras" e pressione Enter
-4. Digite a quantidade
-5. Confirme a venda
-
-**Cadastrar Produto:**
-1. Clique em "➕ Cadastrar Produto"
-2. Preencha todos os campos:
-   - Preços: use vírgula (ex: 12,50)
-   - Validade: formato MM/YYYY (ex: 12/2026)
-3. Clique em "Salvar Produto"
-
-**Controle de Estoque:**
-1. Clique em "📦 Ver Estoque"
-2. Use os filtros para visualizar:
-   - Todos os produtos
-   - Apenas estoque baixo
-3. Produtos em vermelho = estoque abaixo do mínimo
-
-**Relatórios:**
-1. Clique em "📊 Relatórios"
-2. Visualize lucros mensais e anuais
-
-## 📁 Estrutura do Projeto
-
+```text
 LucroVision/
-│
-├── main.py                 # Arquivo principal de execução
-├── database.py             # Configuração do banco de dados
-├── login.py                # Tela de login
-├── dashboard.py            # Dashboard principal
-├── vendas.py               # Módulo de vendas
-├── cadastro_produto.py     # Cadastro de produtos
-├── estoque.py              # Controle de estoque
-├── relatorios.py           # Relatórios de lucratividade
-│
-├── comercio.db             # Banco de dados (criado automaticamente)
-│
-└── README.md               # Este arquivo
+|- main.py                # Ponto de entrada
+|- database.py            # Conexão e criação/migração de tabelas
+|- login.py               # Login e cadastro de usuários
+|- dashboard.py           # Painel principal
+|- cadastro_produto.py    # Cadastro e atualização de produtos
+|- vendas.py              # Registro de vendas
+|- estoque.py             # Visualização e filtros de estoque
+|- relatorios.py          # Relatórios de lucro
+|- requirements.txt
+|- setup.py               # Build de executável (cx_Freeze)
+|- Logo.png / Logo.ico
+|- licenca.txt
 ```
 
-## 🗄️ Banco de Dados
+## Banco de dados
 
-### Estrutura das Tabelas
+Arquivo padrão: `comercio.db`
 
-**funcionarios**
-```sql
-- id (INTEGER PRIMARY KEY)
-- usuario (TEXT UNIQUE)
-- senha (TEXT)
+A aplicação resolve o caminho do banco assim:
+
+- Execução como script Python: pasta do projeto
+- Execução como executável: `%LOCALAPPDATA%\\LucroVisor\\comercio.db`
+- Override opcional por variável de ambiente:
+
+```powershell
+$env:LUCROVISOR_DB_PATH = "C:\dados\lucrovision\comercio.db"
 ```
 
-**produtos**
-```sql
-- id (INTEGER PRIMARY KEY)
-- nome (TEXT)
-- codigo_barras (TEXT UNIQUE)
-- categoria (TEXT)
-- preco_custo (REAL)
-- preco_venda (REAL)
-- quantidade (INTEGER)
-- estoque_minimo (INTEGER)
-- validade (TEXT) -- Formato: YYYY-MM
+### Tabelas
+
+- `funcionarios(id, usuario, senha)`
+- `produtos(id, nome, codigo_barras, categoria, preco_custo, preco_venda, quantidade, estoque_minimo, validade)`
+- `vendas(id, produto_id, quantidade, data_venda)`
+
+## Observações importantes
+
+- Atualmente, a senha de usuário é armazenada em texto no banco.
+- Existe código de validação de licença em `login.py`, mas ele está comentado.
+- Para categorias como `Carnes`, `Frios`, `Padaria` e `Hortifruti`, o sistema permite operação em kg.
+
+## Troubleshooting
+
+- Erro de Tkinter/Tcl ao abrir o sistema:
+  - Reinstale o Python com suporte Tcl/Tk
+  - Em ambiente local, prefira uma instalação estável do Python
+- Ícone ou logo não carregam no executável:
+  - Verifique se `Logo.png` e `Logo.ico` estão disponíveis no build
+
+## Build de executável (opcional)
+
+```powershell
+python setup.py build
 ```
 
-**vendas**
-```sql
-- id (INTEGER PRIMARY KEY)
-- produto_id (INTEGER)
-- quantidade (INTEGER)
-- data_venda (TEXT)
-- FOREIGN KEY(produto_id) -> produtos(id)
-```
+## Autor
 
-## 🔑 Credenciais Padrão
+Cleverson
 
-**Login do Sistema:**
-- O login agora é feito com nome e senha cadastrados pelo usuário.
+## Licença
 
-⚠️ **Importante:** Cadastre um funcionário administrador na primeira execução!
-
-## 📸 Capturas de Tela
-
-### Dashboard
-- Interface principal com cards de estatísticas
-- Tabelas de análise em tempo real
-- Botões de acesso rápido
-
-### Tela de Vendas
-- Busca de produtos
-- Seleção e cálculo automático
-- Validação de estoque
-
-### Controle de Estoque
-- Listagem completa de produtos
-- Filtros e destaque visual
-- Estatísticas em tempo real
-
-## 📝 Convenções do Código
-
-- **Variáveis:** Nomes descritivos e intuitivos em português
-- **Funções:** Documentadas com docstrings
-- **Comentários:** Explicativos e objetivos
-- **Formatação:** PEP 8 (quando aplicável)
-
-## 🎨 Personalização
-
-### Alterar Cores dos Botões
-
-Edite o arquivo correspondente e modifique os valores `bg`:
-
-```python
-# dashboard.py - linha 167
-criar_botao(frame_botoes, "💰 Registrar Venda", vendas.tela_vendas, "#e67e22")
-#                                                                     ^^^^^^^^
-#                                                                     Código da cor
-```
-
-### Adicionar Novos Produtos Iniciais
-
-Edite `database.py` na função `inserir_produtos_iniciais()`.
-
-## ⚠️ Troubleshooting
-
-**Problema:** "Tkinter não encontrado"
-```bash
-# Windows
-pip install tk
-
-# Linux
-sudo apt-get install python3-tk
-```
-
-**Problema:** "Banco de dados não aparece"
-- O banco está na mesma pasta do `main.py`
-- Nome do arquivo: `comercio.db`
-- Use os scripts de verificação
-
-**Problema:** "Estoque vazio"
-- Feche completamente o programa
-- Execute novamente `python main.py`
-- Os produtos são criados automaticamente na primeira execução
-
-## 👨‍💻 Autor
-
-Desenvolvido por Cleverson
-
----
-
-**Versão:** 1.0.1  
-**Última atualização:** 4 de fevereiro de 2026
-
----
-
-## 🤝 Contribuições
-
-Sugestões e melhorias são bem-vindas!
-
-## 📞 Suporte
-
-Para dúvidas ou problemas:
-1. Verifique a seção [Troubleshooting](#troubleshooting)
-2. Execute os scripts de verificação
-3. Revise a documentação completa
-
----
-
-**✨ Obrigado por usar o Sistema de Gerenciamento de Estoque Inteligente!**
+Consulte `licenca.txt`.

@@ -8,6 +8,31 @@ from database import conectar
 from datetime import datetime, timedelta
 from tkinter import PhotoImage
 from PIL import Image, ImageTk
+import os
+import sys
+
+def obter_caminho_recurso(arquivo):
+    """Obtém o caminho correto do arquivo se está rodando como exe ou script"""
+    caminhos_base = []
+
+    if getattr(sys, "frozen", False):
+        # PyInstaller
+        if hasattr(sys, "_MEIPASS"):
+            caminhos_base.append(sys._MEIPASS)
+        # cx_Freeze (ou fallback em executável)
+        caminhos_base.append(os.path.dirname(sys.executable))
+
+    # Execução normal em script
+    caminhos_base.append(os.path.dirname(os.path.abspath(__file__)))
+    caminhos_base.append(os.getcwd())
+
+    for base in caminhos_base:
+        caminho = os.path.join(base, arquivo)
+        if os.path.exists(caminho):
+            return caminho
+
+    # Fallback: mantém comportamento previsível se não encontrar o arquivo
+    return os.path.join(caminhos_base[0], arquivo)
 
 def abrir_dashboard():
     janela = tk.Tk()
@@ -16,93 +41,102 @@ def abrir_dashboard():
     # janela.resizable(True, True)
     janela.configure(bg="#f0f0f0")
 
-    # Carregar e redimensionar o logo
-    logo_img = Image.open("Logo.png")
-    logo_img = logo_img.resize((80, 80), Image.LANCZOS)
-    logo_tk = ImageTk.PhotoImage(logo_img)
+    # Carregar e redimensionar o logo (com fallback para evitar tela em branco no EXE)
+    logo_tk = None
+    try:
+        caminho_logo = obter_caminho_recurso("Logo.png")
+        if os.path.exists(caminho_logo):
+            logo_img = Image.open(caminho_logo)
+            logo_img = logo_img.resize((80, 80), Image.LANCZOS)
+            logo_tk = ImageTk.PhotoImage(logo_img)
+    except Exception:
+        logo_tk = None
 
     # Função para atualizar dados
     def atualizar_dashboard():
-        print('Função atualizar_dashboard chamada!')
         from tkinter import messagebox
-        messagebox.showinfo('Atualização', 'Dashboard atualizado!')
-        conn = conectar()
-        cursor = conn.cursor()
-        
-        # Total de produtos
-        cursor.execute("SELECT COUNT(*) FROM produtos")
-        total_produtos = cursor.fetchone()[0]
-        label_total_produtos.config(text=str(total_produtos))
-        
-        # Produtos com estoque baixo
-        cursor.execute("SELECT COUNT(*) FROM produtos WHERE quantidade <= estoque_minimo")
-        estoque_baixo = cursor.fetchone()[0]
-        label_estoque_baixo.config(text=str(estoque_baixo))
-        
-        # Total de itens em estoque
-        cursor.execute("SELECT SUM(quantidade) FROM produtos")
-        total_itens = cursor.fetchone()[0] or 0
-        label_total_itens.config(text=str(total_itens))
-        
-        # Vendas do mês
-        primeiro_dia_mes = datetime.now().replace(day=1).strftime("%Y-%m-%d")
-        cursor.execute("SELECT COUNT(*) FROM vendas WHERE data_venda >= ?", (primeiro_dia_mes,))
-        vendas_mes = cursor.fetchone()[0]
-        label_vendas_mes.config(text=str(vendas_mes))
-        
-        # Valor total em estoque
-        cursor.execute("SELECT SUM(quantidade * preco_venda) FROM produtos")
-        valor_estoque = cursor.fetchone()[0] or 0
-        label_valor_estoque.config(text=f"R$ {valor_estoque:,.2f}")
-        
-        # Produtos mais vendidos (últimos 30 dias)
-        data_30_dias = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
-        cursor.execute("""
-            SELECT p.nome, SUM(v.quantidade) as total
-            FROM vendas v
-            JOIN produtos p ON v.produto_id = p.id
-            WHERE v.data_venda >= ?
-            GROUP BY p.nome
-            ORDER BY total DESC
-        """, (data_30_dias,))
-        mais_vendidos = cursor.fetchall()
-        
-        # Limpar lista de mais vendidos
-        for item in tree_vendidos.get_children():
-            tree_vendidos.delete(item)
-        
-        for produto, quantidade in mais_vendidos:
-            tree_vendidos.insert("", tk.END, values=(produto, quantidade))
-        
-        # Produtos próximos ao vencimento (mês atual + 1 mês)
-        hoje = datetime.now()
-        proximo_mes = (hoje.replace(day=1) + timedelta(days=32)).replace(day=1)
-        ano_mes_limite = proximo_mes.strftime("%Y-%m")
-        cursor.execute("""
-            SELECT nome, validade, quantidade
-            FROM produtos
-            WHERE validade <= ?
-            ORDER BY validade ASC
-            LIMIT 30
-        """, (ano_mes_limite,))
-        proximos_vencimento = cursor.fetchall()
-        
-        # Limpar lista de vencimentos
-        for item in tree_vencimento.get_children():
-            tree_vencimento.delete(item)
-        
-        for produto, validade, qtd in proximos_vencimento:
-            # Formatar validade para MM/YYYY
-            validade_formatada = ""
-            if validade:
-                try:
-                    partes = validade.split("-")
-                    validade_formatada = f"{partes[1]}/{partes[0]}"
-                except:
-                    validade_formatada = validade
-            tree_vencimento.insert("", tk.END, values=(produto, validade_formatada, qtd))
-        
-        conn.close()
+        conn = None
+        try:
+            conn = conectar()
+            cursor = conn.cursor()
+
+            # Total de produtos
+            cursor.execute("SELECT COUNT(*) FROM produtos")
+            total_produtos = cursor.fetchone()[0]
+            label_total_produtos.config(text=str(total_produtos))
+
+            # Produtos com estoque baixo
+            cursor.execute("SELECT COUNT(*) FROM produtos WHERE quantidade <= estoque_minimo")
+            estoque_baixo = cursor.fetchone()[0]
+            label_estoque_baixo.config(text=str(estoque_baixo))
+
+            # Total de itens em estoque
+            cursor.execute("SELECT SUM(quantidade) FROM produtos")
+            total_itens = cursor.fetchone()[0] or 0
+            label_total_itens.config(text=str(total_itens))
+
+            # Vendas do mês
+            primeiro_dia_mes = datetime.now().replace(day=1).strftime("%Y-%m-%d")
+            cursor.execute("SELECT COUNT(*) FROM vendas WHERE data_venda >= ?", (primeiro_dia_mes,))
+            vendas_mes = cursor.fetchone()[0]
+            label_vendas_mes.config(text=str(vendas_mes))
+
+            # Valor total em estoque
+            cursor.execute("SELECT SUM(quantidade * preco_venda) FROM produtos")
+            valor_estoque = cursor.fetchone()[0] or 0
+            label_valor_estoque.config(text=f"R$ {valor_estoque:,.2f}")
+
+            # Produtos mais vendidos (últimos 30 dias)
+            data_30_dias = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+            cursor.execute("""
+                SELECT p.nome, SUM(v.quantidade) as total
+                FROM vendas v
+                JOIN produtos p ON v.produto_id = p.id
+                WHERE v.data_venda >= ?
+                GROUP BY p.nome
+                ORDER BY total DESC
+            """, (data_30_dias,))
+            mais_vendidos = cursor.fetchall()
+
+            # Limpar lista de mais vendidos
+            for item in tree_vendidos.get_children():
+                tree_vendidos.delete(item)
+
+            for produto, quantidade in mais_vendidos:
+                tree_vendidos.insert("", tk.END, values=(produto, quantidade))
+
+            # Produtos próximos ao vencimento (mês atual + 1 mês)
+            hoje = datetime.now()
+            proximo_mes = (hoje.replace(day=1) + timedelta(days=32)).replace(day=1)
+            ano_mes_limite = proximo_mes.strftime("%Y-%m")
+            cursor.execute("""
+                SELECT nome, validade, quantidade
+                FROM produtos
+                WHERE validade <= ?
+                ORDER BY validade ASC
+                LIMIT 30
+            """, (ano_mes_limite,))
+            proximos_vencimento = cursor.fetchall()
+
+            # Limpar lista de vencimentos
+            for item in tree_vencimento.get_children():
+                tree_vencimento.delete(item)
+
+            for produto, validade, qtd in proximos_vencimento:
+                # Formatar validade para MM/YYYY
+                validade_formatada = ""
+                if validade:
+                    try:
+                        partes = validade.split("-")
+                        validade_formatada = f"{partes[1]}/{partes[0]}"
+                    except Exception:
+                        validade_formatada = validade
+                tree_vencimento.insert("", tk.END, values=(produto, validade_formatada, qtd))
+        except Exception as erro:
+            messagebox.showerror("Erro", f"Falha ao atualizar dashboard: {erro}")
+        finally:
+            if conn is not None:
+                conn.close()
 
     # ===== CABEÇALHO =====
     frame_header = tk.Frame(janela, bg="#FFFFFF", height=80)
@@ -110,9 +144,12 @@ def abrir_dashboard():
     # Frame para destacar a logo (sem borda)
     frame_logo = tk.Frame(frame_header, bg="#FFFFFF")
     frame_logo.pack(side=tk.LEFT, padx=8, pady=2)
-    label_logo = tk.Label(frame_logo, image=logo_tk, bg="#FFFFFF")
-    label_logo.image = logo_tk  # Mantém referência
-    label_logo.pack(padx=2, pady=2)
+    if logo_tk is not None:
+        label_logo = tk.Label(frame_logo, image=logo_tk, bg="#FFFFFF")
+        label_logo.image = logo_tk  # Mantém referência
+        label_logo.pack(padx=2, pady=2)
+    else:
+        tk.Label(frame_logo, text="LV", font=("Arial", 18, "bold"), bg="#FFFFFF", fg="#2c3e50").pack(padx=2, pady=2)
     # Frame para centralizar texto
     frame_texto = tk.Frame(frame_header, bg="#FFFFFF")
     frame_texto.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=4)
