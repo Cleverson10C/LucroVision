@@ -8,8 +8,12 @@ from database import conectar
 from datetime import datetime, timedelta
 from tkinter import PhotoImage
 from PIL import Image, ImageTk
+from api_client import api_habilitada, dashboard_dados
 import os
 import sys
+import logging
+
+logger = logging.getLogger(__name__)
 
 def obter_caminho_recurso(arquivo):
     """Obtém o caminho correto do arquivo se está rodando como exe ou script"""
@@ -29,12 +33,16 @@ def obter_caminho_recurso(arquivo):
     for base in caminhos_base:
         caminho = os.path.join(base, arquivo)
         if os.path.exists(caminho):
+            logger.debug("Recurso '%s' encontrado em %s", arquivo, caminho)
             return caminho
 
     # Fallback: mantém comportamento previsível se não encontrar o arquivo
-    return os.path.join(caminhos_base[0], arquivo)
+    fallback = os.path.join(caminhos_base[0], arquivo)
+    logger.warning("Recurso '%s' nao encontrado. Usando fallback %s", arquivo, fallback)
+    return fallback
 
 def abrir_dashboard():
+    logger.info("Abrindo dashboard")
     janela = tk.Tk()
     janela.title("Painel de Gestão de Produtos — LucroVision")
     janela.geometry("1100x700")
@@ -49,7 +57,9 @@ def abrir_dashboard():
             logo_img = Image.open(caminho_logo)
             logo_img = logo_img.resize((80, 80), Image.LANCZOS)
             logo_tk = ImageTk.PhotoImage(logo_img)
+            logger.info("Logo carregada com sucesso de %s", caminho_logo)
     except Exception:
+        logger.exception("Falha ao carregar logo")
         logo_tk = None
 
     # Função para atualizar dados
@@ -57,46 +67,74 @@ def abrir_dashboard():
         from tkinter import messagebox
         conn = None
         try:
-            conn = conectar()
-            cursor = conn.cursor()
+            logger.info("Atualizando indicadores do dashboard")
+            if api_habilitada():
+                dados = dashboard_dados()
+                total_produtos = dados["total_produtos"]
+                estoque_baixo = dados["estoque_baixo"]
+                total_itens = dados["total_itens"]
+                vendas_mes = dados["vendas_mes"]
+                valor_estoque = dados["valor_estoque"]
+                mais_vendidos = [(item["produto"], item["quantidade"]) for item in dados["mais_vendidos"]]
+                proximos_vencimento = [
+                    (item["produto"], item["validade"], item["quantidade"])
+                    for item in dados["proximos_vencimento"]
+                ]
+            else:
+                conn = conectar()
+                cursor = conn.cursor()
 
-            # Total de produtos
-            cursor.execute("SELECT COUNT(*) FROM produtos")
-            total_produtos = cursor.fetchone()[0]
+                # Total de produtos
+                cursor.execute("SELECT COUNT(*) FROM produtos")
+                total_produtos = cursor.fetchone()[0]
+
+                # Produtos com estoque baixo
+                cursor.execute("SELECT COUNT(*) FROM produtos WHERE quantidade <= estoque_minimo")
+                estoque_baixo = cursor.fetchone()[0]
+
+                # Total de itens em estoque
+                cursor.execute("SELECT SUM(quantidade) FROM produtos")
+                total_itens = cursor.fetchone()[0] or 0
+
+                # Vendas do mês
+                primeiro_dia_mes = datetime.now().replace(day=1).strftime("%Y-%m-%d")
+                cursor.execute("SELECT COUNT(*) FROM vendas WHERE data_venda >= ?", (primeiro_dia_mes,))
+                vendas_mes = cursor.fetchone()[0]
+
+                # Valor total em estoque
+                cursor.execute("SELECT SUM(quantidade * preco_venda) FROM produtos")
+                valor_estoque = cursor.fetchone()[0] or 0
+
+                # Produtos mais vendidos (últimos 30 dias)
+                data_30_dias = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+                cursor.execute("""
+                    SELECT p.nome, SUM(v.quantidade) as total
+                    FROM vendas v
+                    JOIN produtos p ON v.produto_id = p.id
+                    WHERE v.data_venda >= ?
+                    GROUP BY p.nome
+                    ORDER BY total DESC
+                """, (data_30_dias,))
+                mais_vendidos = cursor.fetchall()
+
+                # Produtos próximos ao vencimento (mês atual + 1 mês)
+                hoje = datetime.now()
+                proximo_mes = (hoje.replace(day=1) + timedelta(days=32)).replace(day=1)
+                ano_mes_limite = proximo_mes.strftime("%Y-%m")
+                cursor.execute("""
+                    SELECT nome, validade, quantidade
+                    FROM produtos
+                    WHERE validade <= ?
+                    ORDER BY validade ASC
+                    LIMIT 30
+                """, (ano_mes_limite,))
+                proximos_vencimento = cursor.fetchall()
+
             label_total_produtos.config(text=str(total_produtos))
-
-            # Produtos com estoque baixo
-            cursor.execute("SELECT COUNT(*) FROM produtos WHERE quantidade <= estoque_minimo")
-            estoque_baixo = cursor.fetchone()[0]
             label_estoque_baixo.config(text=str(estoque_baixo))
-
-            # Total de itens em estoque
-            cursor.execute("SELECT SUM(quantidade) FROM produtos")
-            total_itens = cursor.fetchone()[0] or 0
             label_total_itens.config(text=str(total_itens))
-
-            # Vendas do mês
-            primeiro_dia_mes = datetime.now().replace(day=1).strftime("%Y-%m-%d")
-            cursor.execute("SELECT COUNT(*) FROM vendas WHERE data_venda >= ?", (primeiro_dia_mes,))
-            vendas_mes = cursor.fetchone()[0]
             label_vendas_mes.config(text=str(vendas_mes))
-
-            # Valor total em estoque
-            cursor.execute("SELECT SUM(quantidade * preco_venda) FROM produtos")
-            valor_estoque = cursor.fetchone()[0] or 0
             label_valor_estoque.config(text=f"R$ {valor_estoque:,.2f}")
-
-            # Produtos mais vendidos (últimos 30 dias)
-            data_30_dias = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
-            cursor.execute("""
-                SELECT p.nome, SUM(v.quantidade) as total
-                FROM vendas v
-                JOIN produtos p ON v.produto_id = p.id
-                WHERE v.data_venda >= ?
-                GROUP BY p.nome
-                ORDER BY total DESC
-            """, (data_30_dias,))
-            mais_vendidos = cursor.fetchall()
 
             # Limpar lista de mais vendidos
             for item in tree_vendidos.get_children():
@@ -104,19 +142,6 @@ def abrir_dashboard():
 
             for produto, quantidade in mais_vendidos:
                 tree_vendidos.insert("", tk.END, values=(produto, quantidade))
-
-            # Produtos próximos ao vencimento (mês atual + 1 mês)
-            hoje = datetime.now()
-            proximo_mes = (hoje.replace(day=1) + timedelta(days=32)).replace(day=1)
-            ano_mes_limite = proximo_mes.strftime("%Y-%m")
-            cursor.execute("""
-                SELECT nome, validade, quantidade
-                FROM produtos
-                WHERE validade <= ?
-                ORDER BY validade ASC
-                LIMIT 30
-            """, (ano_mes_limite,))
-            proximos_vencimento = cursor.fetchall()
 
             # Limpar lista de vencimentos
             for item in tree_vencimento.get_children():
@@ -132,7 +157,15 @@ def abrir_dashboard():
                     except Exception:
                         validade_formatada = validade
                 tree_vencimento.insert("", tk.END, values=(produto, validade_formatada, qtd))
+            logger.info(
+                "Dashboard atualizado: total_produtos=%s, estoque_baixo=%s, total_itens=%s, vendas_mes=%s",
+                total_produtos,
+                estoque_baixo,
+                total_itens,
+                vendas_mes,
+            )
         except Exception as erro:
+            logger.exception("Falha ao atualizar dashboard: %s", erro)
             messagebox.showerror("Erro", f"Falha ao atualizar dashboard: {erro}")
         finally:
             if conn is not None:

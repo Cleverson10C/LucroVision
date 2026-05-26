@@ -13,3 +13,8 @@ python-msilib==0.4.3
 cabarchive==0.2.4
 lief==0.17.1
 freeze-core==0.4.1
+fastapi==0.121.1
+uvicorn==0.38.0
+pydantic==2.12.3
+Pillow==11.3.0
+pytest==8.4.2

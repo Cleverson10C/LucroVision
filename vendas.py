@@ -7,9 +7,19 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from database import conectar
 from datetime import datetime
+import logging
+from api_client import (
+    api_habilitada,
+    produto_por_codigo,
+    produtos_disponiveis,
+    registrar_venda as api_registrar_venda,
+)
+
+logger = logging.getLogger(__name__)
 
 def tela_vendas():
     """Cria e exibe a tela de registro de vendas"""
+    logger.info("Tela de vendas aberta")
     
     janela_vendas = tk.Toplevel()
     janela_vendas.title("Registrar Venda")
@@ -104,7 +114,8 @@ def tela_vendas():
             campo_kg.delete(0, tk.END)
             campo_kg.insert(0, f"{novo_valor:.3f}".replace(".", ","))
             calcular_total()
-        except:
+        except Exception as exc:
+            logger.warning("Valor de kg invalido no ajuste: %s", exc)
             campo_kg.delete(0, tk.END)
             campo_kg.insert(0, "0,100")
             calcular_total()
@@ -131,6 +142,7 @@ def tela_vendas():
     # Função para adicionar item à venda
     def adicionar_item_venda():
         if not produto_selecionado["id"]:
+            logger.warning("Tentativa de adicionar item sem produto selecionado")
             messagebox.showerror("Erro", "Selecione um produto para adicionar!")
             return
         try:
@@ -139,6 +151,7 @@ def tela_vendas():
             else:
                 quantidade = int(campo_quantidade.get())
             if quantidade <= 0:
+                logger.warning("Tentativa de adicionar item com quantidade invalida: %s", quantidade)
                 messagebox.showerror("Erro", "A quantidade deve ser maior que zero!")
                 return
             subtotal = produto_selecionado["preco"] * quantidade
@@ -164,7 +177,15 @@ def tela_vendas():
                 ),
             )
             atualizar_total_venda()
+            logger.info(
+                "Item adicionado a venda: produto_id=%s, nome='%s', quantidade=%s, subtotal=%.2f",
+                item["id"],
+                item["nome"],
+                item["quantidade"],
+                item["subtotal"],
+            )
         except Exception as e:
+            logger.exception("Erro ao adicionar item na venda: %s", e)
             messagebox.showerror("Erro", f"Erro ao adicionar item: {e}")
 
     # Função para atualizar o total geral da venda
@@ -184,28 +205,47 @@ def tela_vendas():
         # Limpar itens anteriores da tabela
         for item_tabela in tabela_produtos.get_children():
             tabela_produtos.delete(item_tabela)
-        
-        conexao_banco = conectar()
-        cursor_banco = conexao_banco.cursor()
-        
-        # Buscar com filtro ou todos os produtos
-        if texto_filtro:
-            cursor_banco.execute("""
-                SELECT id, nome, categoria, quantidade, preco_venda, codigo_barras
-                FROM produtos 
-                WHERE quantidade > 0 AND nome LIKE ?
-                ORDER BY nome ASC
-            """, (f"%{texto_filtro}%",))
+
+        if api_habilitada():
+            api_itens = produtos_disponiveis(texto_filtro)
+            lista_produtos_disponiveis = [
+                (
+                    item["id"],
+                    item["nome"],
+                    item["categoria"],
+                    item["quantidade"],
+                    item["preco_venda"],
+                    item["codigo_barras"],
+                )
+                for item in api_itens
+            ]
         else:
-            cursor_banco.execute("""
-                SELECT id, nome, categoria, quantidade, preco_venda, codigo_barras
-                FROM produtos 
-                WHERE quantidade > 0
-                ORDER BY nome ASC
-            """)
-        
-        lista_produtos_disponiveis = cursor_banco.fetchall()
-        conexao_banco.close()
+            conexao_banco = conectar()
+            cursor_banco = conexao_banco.cursor()
+            
+            # Buscar com filtro ou todos os produtos
+            if texto_filtro:
+                cursor_banco.execute("""
+                    SELECT id, nome, categoria, quantidade, preco_venda, codigo_barras
+                    FROM produtos 
+                    WHERE quantidade > 0 AND nome LIKE ?
+                    ORDER BY nome ASC
+                """, (f"%{texto_filtro}%",))
+            else:
+                cursor_banco.execute("""
+                    SELECT id, nome, categoria, quantidade, preco_venda, codigo_barras
+                    FROM produtos 
+                    WHERE quantidade > 0
+                    ORDER BY nome ASC
+                """)
+            
+            lista_produtos_disponiveis = cursor_banco.fetchall()
+            conexao_banco.close()
+        logger.info(
+            "Produtos disponiveis carregados para venda: filtro='%s', registros=%s",
+            texto_filtro,
+            len(lista_produtos_disponiveis),
+        )
         
         # Preencher tabela com produtos
         for dados_produto in lista_produtos_disponiveis:
@@ -281,8 +321,9 @@ def tela_vendas():
             # Formatar para padrão brasileiro (R$ 1.234,56)
             total_formatado = f"R$ {valor_total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
             # Mostra o total do item selecionado, não o total geral
-        except:
-            pass
+            logger.debug("Total item calculado: %s", total_formatado)
+        except Exception as exc:
+            logger.warning("Nao foi possivel calcular total do item: %s", exc)
     
     def buscar_produto(evento=None):
         """Busca produtos conforme o texto digitado"""
@@ -293,17 +334,32 @@ def tela_vendas():
         codigo = campo_codigo_barras.get().strip()
         if not codigo:
             return
-        conexao_banco = conectar()
-        cursor_banco = conexao_banco.cursor()
-        cursor_banco.execute("""
-            SELECT id, nome, categoria, quantidade, preco_venda, codigo_barras
-            FROM produtos 
-            WHERE codigo_barras = ?
-        """, (codigo,))
-        resultado = cursor_banco.fetchone()
-        conexao_banco.close()
+        logger.info("Busca de produto por codigo de barras iniciada")
+        if api_habilitada():
+            item = produto_por_codigo(codigo)
+            resultado = None
+            if item:
+                resultado = (
+                    item["id"],
+                    item["nome"],
+                    item["categoria"],
+                    item["quantidade"],
+                    item["preco_venda"],
+                    item["codigo_barras"],
+                )
+        else:
+            conexao_banco = conectar()
+            cursor_banco = conexao_banco.cursor()
+            cursor_banco.execute("""
+                SELECT id, nome, categoria, quantidade, preco_venda, codigo_barras
+                FROM produtos 
+                WHERE codigo_barras = ?
+            """, (codigo,))
+            resultado = cursor_banco.fetchone()
+            conexao_banco.close()
 
         if not resultado:
+            logger.warning("Codigo de barras nao encontrado")
             messagebox.showerror("Erro", "Código de barras não encontrado.")
             campo_codigo_barras.delete(0, tk.END)
             campo_codigo_barras.focus_set()
@@ -334,40 +390,58 @@ def tela_vendas():
     def registrar_venda():
         """Registra a venda no banco de dados e atualiza o estoque para todos os itens da venda"""
         if not itens_venda:
+            logger.warning("Tentativa de registrar venda sem itens")
             messagebox.showerror("Erro", "Adicione pelo menos um item à venda!")
             return
+
         try:
-            conexao_banco = conectar()
-            cursor_banco = conexao_banco.cursor()
+            logger.info("Iniciando registro de venda com %s item(ns)", len(itens_venda))
             data_venda_atual = datetime.now().strftime("%Y-%m-%d")
-            total_geral = 0
-            for item in itens_venda:
-                # Validar estoque
-                cursor_banco.execute("SELECT quantidade FROM produtos WHERE id = ?", (item["id"],))
-                estoque_atual = cursor_banco.fetchone()
-                if not estoque_atual or item["quantidade"] > estoque_atual[0]:
-                    messagebox.showerror("Erro", f"Estoque insuficiente para o produto {item['nome']}! Disponível: {estoque_atual[0] if estoque_atual else 0}")
-                    conexao_banco.close()
-                    return
-            # Confirmação
             total_geral = sum(i["subtotal"] for i in itens_venda)
             usuario_confirmou = messagebox.askyesno(
                 "Confirmar Venda",
                 f"Itens: {len(itens_venda)}\nTotal: R$ {total_geral:.2f}\n\nConfirmar venda?")
             if not usuario_confirmou:
-                conexao_banco.close()
+                logger.info("Registro de venda cancelado pelo usuario")
                 return
-            # Registrar cada item
-            for item in itens_venda:
-                cursor_banco.execute("""
-                    INSERT INTO vendas (produto_id, quantidade, data_venda)
-                    VALUES (?, ?, ?)
-                """, (item["id"], item["quantidade"], data_venda_atual))
-                cursor_banco.execute("""
-                    UPDATE produtos SET quantidade = quantidade - ? WHERE id = ?
-                """, (item["quantidade"], item["id"]))
-            conexao_banco.commit()
-            conexao_banco.close()
+
+            if api_habilitada():
+                payload_itens = [
+                    {"id": item["id"], "quantidade": item["quantidade"], "subtotal": item["subtotal"]}
+                    for item in itens_venda
+                ]
+                resposta = api_registrar_venda(payload_itens, data_venda_atual)
+                total_geral = resposta.get("total", total_geral)
+            else:
+                conexao_banco = conectar()
+                cursor_banco = conexao_banco.cursor()
+                for item in itens_venda:
+                    # Validar estoque
+                    cursor_banco.execute("SELECT quantidade FROM produtos WHERE id = ?", (item["id"],))
+                    estoque_atual = cursor_banco.fetchone()
+                    if not estoque_atual or item["quantidade"] > estoque_atual[0]:
+                        logger.warning(
+                            "Estoque insuficiente para produto_id=%s nome='%s': solicitado=%s, disponivel=%s",
+                            item["id"],
+                            item["nome"],
+                            item["quantidade"],
+                            estoque_atual[0] if estoque_atual else 0,
+                        )
+                        messagebox.showerror("Erro", f"Estoque insuficiente para o produto {item['nome']}! Disponível: {estoque_atual[0] if estoque_atual else 0}")
+                        conexao_banco.close()
+                        return
+                for item in itens_venda:
+                    cursor_banco.execute("""
+                        INSERT INTO vendas (produto_id, quantidade, data_venda)
+                        VALUES (?, ?, ?)
+                    """, (item["id"], item["quantidade"], data_venda_atual))
+                    cursor_banco.execute("""
+                        UPDATE produtos SET quantidade = quantidade - ? WHERE id = ?
+                    """, (item["quantidade"], item["id"]))
+                conexao_banco.commit()
+                conexao_banco.close()
+
+            logger.info("Venda registrada com sucesso. Itens=%s, total=%.2f", len(itens_venda), total_geral)
             messagebox.showinfo("Sucesso", f"Venda registrada com sucesso!\nTotal: R$ {total_geral:.2f}")
             # Limpar seleção e itens
             produto_selecionado["id"] = None
@@ -388,6 +462,7 @@ def tela_vendas():
             campo_kg.insert(0, "0,100")
             carregar_produtos()
         except Exception as erro_exception:
+            logger.exception("Erro ao registrar venda: %s", erro_exception)
             messagebox.showerror("Erro", f"Erro ao registrar venda: {str(erro_exception)}")
     
     # Vincular eventos aos componentes

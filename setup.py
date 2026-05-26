@@ -1,6 +1,10 @@
 import sys
 import os
+import logging
 from cx_Freeze import setup, Executable
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(name)s | %(message)s")
 
 # Configuração das opções de build
 build_exe_options = {
@@ -12,6 +16,7 @@ build_exe_options = {
 base = None
 if sys.platform == "win32":
     base = "gui"   # em versões novas do cx_Freeze
+logger.info("Iniciando build do executavel LucroVisor (base=%s)", base)
 
 # Configuração do executável
 setup(

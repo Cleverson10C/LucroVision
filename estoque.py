@@ -7,9 +7,34 @@ import tkinter as tk
 from tkinter import ttk
 from database import conectar
 import datetime
+import logging
+from api_client import api_habilitada, estoque_categorias, estoque_estatisticas, estoque_lista
+
+logger = logging.getLogger(__name__)
+
+
+def montar_filtros_estoque_sql(tipo_visualizacao, categoria):
+    parametros = []
+    filtros_sql = []
+
+    if tipo_visualizacao == "baixo":
+        filtros_sql.append("quantidade <= estoque_minimo")
+
+    if categoria != "Todas":
+        filtros_sql.append("categoria = ?")
+        parametros.append(categoria)
+
+    if filtros_sql:
+        clausula_where = f"WHERE {' AND '.join(filtros_sql)}"
+    else:
+        clausula_where = ""
+
+    return clausula_where, parametros
+
 
 def tela_estoque():
     """Cria e exibe a tela de controle de estoque com filtros e estatísticas"""
+    logger.info("Tela de estoque aberta")
     
     # Criar janela principal do estoque
     janela_estoque = tk.Toplevel()
@@ -28,13 +53,17 @@ def tela_estoque():
 
     # Combobox de categoria dinâmico
     def atualizar_categorias():
-        conexao_banco = conectar()
-        cursor_banco = conexao_banco.cursor()
-        cursor_banco.execute("SELECT DISTINCT categoria FROM produtos WHERE categoria IS NOT NULL AND categoria != ''")
-        cats = sorted([row[0] for row in cursor_banco.fetchall()])
-        conexao_banco.close()
+        if api_habilitada():
+            cats = estoque_categorias()
+        else:
+            conexao_banco = conectar()
+            cursor_banco = conexao_banco.cursor()
+            cursor_banco.execute("SELECT DISTINCT categoria FROM produtos WHERE categoria IS NOT NULL AND categoria != ''")
+            cats = sorted([row[0] for row in cursor_banco.fetchall()])
+            conexao_banco.close()
         lista_categorias = ["Todas"] + cats
         combo_categoria['values'] = lista_categorias
+        logger.debug("Categorias carregadas: %s", len(cats))
         if categoria_filtro.get() not in lista_categorias:
             categoria_filtro.set("Todas")
 
@@ -50,35 +79,42 @@ def tela_estoque():
         for item_tabela in tabela_produtos.get_children():
             tabela_produtos.delete(item_tabela)
         
-        # Conectar ao banco de dados
-        conexao_banco = conectar()
-        cursor_banco = conexao_banco.cursor()
-
         # Buscar produtos conforme filtro de categoria e tipo
         categoria = categoria_filtro.get()
         tipo_visualizacao = tipo_filtro.get()
-        parametros = []
-        filtros_sql = []
-
-        if tipo_visualizacao == "baixo":
-            filtros_sql.append("quantidade <= estoque_minimo")
+        if api_habilitada():
+            itens_api = estoque_lista(tipo_visualizacao, categoria)
+            lista_produtos = [
+                (
+                    item["nome"],
+                    item["categoria"],
+                    item["quantidade"],
+                    item["estoque_minimo"],
+                    item["preco_venda"],
+                    item["validade"],
+                )
+                for item in itens_api
+            ]
         else:
-            filtros_sql.append("quantidade > estoque_minimo")
-
-        if categoria != "Todas":
-            filtros_sql.append("categoria = ?")
-            parametros.append(categoria)
-
-        filtros_combinados = " AND ".join(filtros_sql)
-        consulta = f"""
-            SELECT nome, categoria, quantidade, estoque_minimo, preco_venda, validade
-            FROM produtos
-            WHERE {filtros_combinados}
-            ORDER BY nome ASC
-        """
-        cursor_banco.execute(consulta, parametros)
-        lista_produtos = cursor_banco.fetchall()
-        conexao_banco.close()
+            # Conectar ao banco de dados
+            conexao_banco = conectar()
+            cursor_banco = conexao_banco.cursor()
+            where_sql, parametros = montar_filtros_estoque_sql(tipo_visualizacao, categoria)
+            consulta = f"""
+                SELECT nome, categoria, quantidade, estoque_minimo, preco_venda, validade
+                FROM produtos
+                {where_sql}
+                ORDER BY nome ASC
+            """
+            cursor_banco.execute(consulta, parametros)
+            lista_produtos = cursor_banco.fetchall()
+            conexao_banco.close()
+        logger.info(
+            "Lista de estoque carregada: tipo='%s', categoria='%s', registros=%s",
+            tipo_visualizacao,
+            categoria,
+            len(lista_produtos),
+        )
 
         # Preencher tabela com os produtos
         if lista_produtos:
@@ -101,7 +137,8 @@ def tela_estoque():
                     try:
                         partes_data = data_validade.split('-')
                         data_formatada = f"{partes_data[1]}/{partes_data[0]}"
-                    except:
+                    except Exception as exc:
+                        logger.warning("Falha ao formatar validade '%s': %s", data_validade, exc)
                         data_formatada = data_validade
                 else:
                     data_formatada = ""
@@ -166,22 +203,33 @@ def tela_estoque():
 
     def atualizar_estatisticas():
         """Atualiza as estatísticas exibidas na parte inferior da tela"""
-        conexao_banco = conectar()
-        cursor_banco = conexao_banco.cursor()
-        
-        # Total de produtos cadastrados
-        cursor_banco.execute("SELECT COUNT(*) FROM produtos")
-        total_produtos = cursor_banco.fetchone()[0]
-        
-        # Produtos com estoque baixo
-        cursor_banco.execute("SELECT COUNT(*) FROM produtos WHERE quantidade <= estoque_minimo")
-        produtos_estoque_baixo = cursor_banco.fetchone()[0]
-        
-        # Total de itens em estoque (soma de todas as quantidades)
-        cursor_banco.execute("SELECT SUM(quantidade) FROM produtos")
-        total_itens_estoque = cursor_banco.fetchone()[0] or 0
-        
-        conexao_banco.close()
+        if api_habilitada():
+            dados = estoque_estatisticas()
+            total_produtos = dados["total_produtos"]
+            produtos_estoque_baixo = dados["estoque_baixo"]
+            total_itens_estoque = dados["total_itens"]
+        else:
+            conexao_banco = conectar()
+            cursor_banco = conexao_banco.cursor()
+            
+            # Total de produtos cadastrados
+            cursor_banco.execute("SELECT COUNT(*) FROM produtos")
+            total_produtos = cursor_banco.fetchone()[0]
+            
+            # Produtos com estoque baixo
+            cursor_banco.execute("SELECT COUNT(*) FROM produtos WHERE quantidade <= estoque_minimo")
+            produtos_estoque_baixo = cursor_banco.fetchone()[0]
+            
+            # Total de itens em estoque (soma de todas as quantidades)
+            cursor_banco.execute("SELECT SUM(quantidade) FROM produtos")
+            total_itens_estoque = cursor_banco.fetchone()[0] or 0
+            conexao_banco.close()
+        logger.debug(
+            "Estatisticas estoque: total_produtos=%s, estoque_baixo=%s, total_itens=%s",
+            total_produtos,
+            produtos_estoque_baixo,
+            total_itens_estoque,
+        )
         
         # Atualizar texto do rótulo
         rotulo_estatisticas.config(

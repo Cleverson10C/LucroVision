@@ -2,69 +2,63 @@ import tkinter as tk
 from tkinter import messagebox
 from database import conectar
 import dashboard
-import requests
-
-# def acesso_permitido(licenca):
-#     try:
-#         # Agora sem headers e sem token
-#         requisicao = requests.get('https://api-licencas-9ur1.onrender.com/licenses')
-#         LICENCA_ESPECIFICA = 'DZOD8-PNOO6-DESMA-7IC60-LUMR2'
-#         if requisicao.status_code == 200 and requisicao.text:
-#             resultado = requisicao.json()
-#             licencas_validas = []
-#                 # Se for dicionário com 'Licenças'
-#             if isinstance(resultado, dict) and 'Licenças' in resultado:
-#                 licencas_validas = [item.get('licença') or item.get('licenca') for item in resultado['Licenças']]
-#                 # Se for lista de licenças
-#             elif isinstance(resultado, list):
-#                 licencas_validas = [item.get('licenca') or item.get('licença') for item in resultado]
-#                 print(f"Licença digitada: {licenca}")
-#                 if licenca == LICENCA_ESPECIFICA and licenca in licencas_validas:
-#                     print("Licença correta e encontrada na lista.")
-#                     return True
-#                 else:
-#                     return False
-#             else:
-#                 return False
-#         else:
-#             return False
-#     except Exception as e:
-#         return False
-
-# # Janela para pedir a licença
-# class LicencaDialog(tk.Tk):
-#     def __init__(self):
-#         super().__init__()
-#         self.title("Licença de acesso")
-#         self.geometry("350x140")
-#         # self.resizable(False, False)
-#         self.licenca = None
-
-#         self.label = tk.Label(self, text="Digite sua licença de acesso:", font=("Arial", 12))
-#         self.label.pack(pady=10)
-
-#         self.entry = tk.Entry(self, width=31)
-#         self.entry.pack(pady=5)
-
-#         self.button = tk.Button(self, text="Validar", bg="#3498db", fg="white",  font=("Arial", 10, "bold"), command=self.validar)
-#         self.button.pack(pady=10)
-
-#     def validar(self):
-#         self.licenca = self.entry.get()
-#         self.destroy()
+import logging
+from api_client import api_habilitada, cadastrar_usuario as api_cadastrar_usuario, login as api_login
+from security import gerar_hash_senha, verificar_hash_senha
+logger = logging.getLogger(__name__)
 
 
 def verificar_login(usuario, senha):
-    """Verifica se o usuário e senha são válidos no banco de dados"""
+    """Verifica se o usuário e senha são válidos no banco de dados."""
+    logger.info("Tentativa de login para usuario '%s'", usuario)
+    if api_habilitada():
+        try:
+            autenticado = api_login(usuario, senha)
+            if autenticado:
+                logger.info("Login via API realizado com sucesso para usuario '%s'", usuario)
+            else:
+                logger.warning("Falha de login via API para usuario '%s'", usuario)
+            return autenticado
+        except Exception as exc:
+            logger.exception("Falha ao autenticar via API: %s", exc)
+            return False
+
     conexao_banco = conectar()
     cursor_banco = conexao_banco.cursor()
-    cursor_banco.execute("SELECT * FROM funcionarios WHERE usuario=? AND senha=?", (usuario, senha))
+    cursor_banco.execute("SELECT id, senha FROM funcionarios WHERE usuario=?", (usuario,))
     funcionario_encontrado = cursor_banco.fetchone()
+
+    if not funcionario_encontrado:
+        logger.warning("Falha de login: usuario '%s' nao encontrado", usuario)
+        conexao_banco.close()
+        return False
+
+    funcionario_id, senha_armazenada = funcionario_encontrado
+    senha_armazenada = senha_armazenada or ""
+
+    # Suporta usuários antigos com senha em texto puro e migra para hash no primeiro login.
+    if "$" in senha_armazenada and verificar_hash_senha(senha, senha_armazenada):
+        logger.info("Login realizado com sucesso para usuario '%s' (hash)", usuario)
+        conexao_banco.close()
+        return True
+
+    if senha_armazenada == senha:
+        novo_hash = gerar_hash_senha(senha)
+        cursor_banco.execute("UPDATE funcionarios SET senha=? WHERE id=?", (novo_hash, funcionario_id))
+        conexao_banco.commit()
+        logger.info("Senha legado migrada para hash para usuario '%s'", usuario)
+        logger.info("Login realizado com sucesso para usuario '%s' (migrado)", usuario)
+        conexao_banco.close()
+        return True
+
+    logger.warning("Falha de login: senha invalida para usuario '%s'", usuario)
     conexao_banco.close()
-    return funcionario_encontrado is not None
+    return False
+
 
 def cadastrar_usuario():
     """Abre tela para cadastrar novo usuário"""
+    logger.info("Tela de cadastro de usuario aberta")
     def salvar_usuario():
         """Salva o novo usuário no banco de dados"""
         novo_usuario = campo_novo_usuario.get().strip()
@@ -73,43 +67,63 @@ def cadastrar_usuario():
         
         # Validações
         if not novo_usuario or not nova_senha:
+            logger.warning("Cadastro de usuario falhou: campos obrigatorios vazios")
             messagebox.showerror("Erro", "Preencha todos os campos!")
             return
         
         if len(novo_usuario) < 4:
+            logger.warning("Cadastro de usuario falhou: usuario curto (%s)", novo_usuario)
             messagebox.showerror("Erro", "Usuário deve ter pelo menos 4 caracteres!")
             return
         
         if len(nova_senha) < 4:
+            logger.warning("Cadastro de usuario falhou: senha curta para usuario '%s'", novo_usuario)
             messagebox.showerror("Erro", "Senha deve ter pelo menos 4 caracteres!")
             return
         
         if nova_senha != confirmar_senha:
+            logger.warning("Cadastro de usuario falhou: confirmacao divergente para usuario '%s'", novo_usuario)
             messagebox.showerror("Erro", "As senhas não coincidem!")
             return
         
-        # Verificar se usuário já existe
-        conexao_banco = conectar()
-        cursor_banco = conexao_banco.cursor()
-        cursor_banco.execute("SELECT * FROM funcionarios WHERE usuario=?", (novo_usuario,))
-        usuario_existente = cursor_banco.fetchone()
-        
-        if usuario_existente:
-            messagebox.showerror("Erro", "Usuário já cadastrado!")
-            conexao_banco.close()
-            return
+        conexao_banco = None
+        cursor_banco = None
+        if not api_habilitada():
+            # Verificar se usuário já existe
+            conexao_banco = conectar()
+            cursor_banco = conexao_banco.cursor()
+            cursor_banco.execute("SELECT * FROM funcionarios WHERE usuario=?", (novo_usuario,))
+            usuario_existente = cursor_banco.fetchone()
+            
+            if usuario_existente:
+                logger.warning("Cadastro de usuario falhou: usuario '%s' ja existe", novo_usuario)
+                messagebox.showerror("Erro", "Usuário já cadastrado!")
+                conexao_banco.close()
+                return
         
         # Cadastrar novo usuário
         try:
-            cursor_banco.execute("INSERT INTO funcionarios (usuario, senha) VALUES (?, ?)", 
-                               (novo_usuario, nova_senha))
-            conexao_banco.commit()
-            conexao_banco.close()
+            logger.info("Tentando cadastrar usuario '%s'", novo_usuario)
+            if api_habilitada():
+                api_cadastrar_usuario(novo_usuario, nova_senha)
+            else:
+                senha_hash = gerar_hash_senha(nova_senha)
+                cursor_banco.execute(
+                    "INSERT INTO funcionarios (usuario, senha) VALUES (?, ?)",
+                    (novo_usuario, senha_hash),
+                )
+                conexao_banco.commit()
+                conexao_banco.close()
+            logger.info("Usuario '%s' cadastrado com sucesso", novo_usuario)
             messagebox.showinfo("Sucesso", "Usuário cadastrado com sucesso!")
             janela_cadastro.destroy()
         except Exception as erro:
+            logger.exception("Erro ao cadastrar usuario '%s': %s", novo_usuario, erro)
             messagebox.showerror("Erro", f"Erro ao cadastrar usuário: {str(erro)}")
-            conexao_banco.close()
+            try:
+                conexao_banco.close()
+            except Exception as exc:
+                logger.exception("Falha ao fechar conexao apos erro de cadastro: %s", exc)
     
     janela_cadastro = tk.Toplevel()
     janela_cadastro.title("Cadastrar Novo Usuário")
@@ -143,17 +157,10 @@ def cadastrar_usuario():
              bg="#c0392b", fg="white", font=("Arial", 11, "bold"), 
              padx=20, pady=5).pack(side=tk.LEFT, padx=5)
 
+
 def tela_login():
     """Cria e exibe a tela de login do sistema"""
-    
-   # Validar licença primeiro
-    # dialog = LicencaDialog()
-    # dialog.mainloop()
-    # licenca = dialog.licenca
-    
-    # if not licenca or not acesso_permitido(licenca):
-    #     messagebox.showerror("Erro", "Licença inválida! Acesso negado.")
-    #     return
+    logger.info("Tela de login iniciada")
     
     def autenticar_usuario():
         """Valida as credenciais e abre o dashboard se correto"""
@@ -161,14 +168,17 @@ def tela_login():
         senha_usuario = campo_senha.get().strip()
         
         if not nome_usuario or not senha_usuario:
+            logger.warning("Tentativa de login com campos vazios")
             messagebox.showerror("Erro", "Preencha todos os campos!")
             return
         
         if verificar_login(nome_usuario, senha_usuario):
+            logger.info("Usuario '%s' autenticado. Abrindo dashboard.", nome_usuario)
             messagebox.showinfo("Login", "Login realizado com sucesso!")
             janela_login.destroy()
             dashboard.abrir_dashboard()
         else:
+            logger.warning("Autenticacao negada para usuario '%s'", nome_usuario)
             messagebox.showerror("Erro", "Usuário ou senha inválidos.")
 
     janela_login = tk.Tk()
