@@ -178,6 +178,7 @@ def tela_vendas():
             tabela_venda.insert(
                 "",
                 tk.END,
+                iid=str(len(itens_venda) - 1),
                 values=(
                     item["nome"],
                     f"R$ {item['preco']:.2f}",
@@ -203,6 +204,40 @@ def tela_vendas():
         total = sum(item["subtotal"] for item in itens_venda)
         total_formatado = f"R$ {total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         label_total.config(text=total_formatado)
+
+    def remover_item_venda():
+        selecao = tabela_venda.selection()
+        if not selecao:
+            messagebox.showinfo("Remover item", "Selecione na lista o produto que deseja remover.")
+            return
+
+        indice = int(selecao[0])
+        item_removido = itens_venda.pop(indice)
+        tabela_venda.delete(*tabela_venda.get_children())
+        for novo_indice, item in enumerate(itens_venda):
+            tabela_venda.insert(
+                "",
+                tk.END,
+                iid=str(novo_indice),
+                values=(
+                    item["nome"],
+                    f"R$ {item['preco']:.2f}",
+                    item["quantidade"],
+                    f"R$ {item['subtotal']:.2f}",
+                    item["codigo_barras"],
+                ),
+            )
+        atualizar_total_venda()
+        logger.info(
+            "Item removido da venda: produto_id=%s, nome='%s'",
+            item_removido["id"],
+            item_removido["nome"],
+        )
+
+    def remover_com_tecla_delete(evento):
+        if tabela_venda.selection():
+            remover_item_venda()
+            return "break"
 
     # Botão para adicionar item à venda
     botao_add_item = tk.Button(frame_info, text="Adicionar à Venda", command=adicionar_item_venda,
@@ -322,6 +357,19 @@ def tela_vendas():
     tk.Label(frame_info, text="Total da Compra:", bg="white", font=("Segoe UI", 15, "bold")).grid(row=6, column=0, sticky=tk.W, pady=10)
     label_total = tk.Label(frame_info, text="R$ 0,00", bg="white", font=("Segoe UI", 19, "bold"), fg="#15803d")
     label_total.grid(row=6, column=1, sticky=tk.W, padx=10, pady=10)
+    botao_remover_item = tk.Button(
+        frame_info,
+        text="Remover item selecionado",
+        command=remover_item_venda,
+        bg="#b91c1c",
+        fg="white",
+        font=("Segoe UI", 13, "bold"),
+        width=220,
+        height=44,
+        corner_radius=12,
+    )
+    botao_remover_item.grid(row=6, column=4, padx=10, pady=10, sticky=tk.E)
+    tabela_venda.bind("<Delete>", remover_com_tecla_delete)
 
     def calcular_total():
         try:
