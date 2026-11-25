@@ -2,7 +2,7 @@
 
 import tkinter as _tk
 from tkinter import ttk
-from typing import Any
+from typing import Any, Callable
 
 import customtkinter as _ctk
 
@@ -23,57 +23,98 @@ def _adaptar_opcoes(opcoes: dict[str, Any]) -> dict[str, Any]:
     return opcoes
 
 
-class _ConfiguraCores:
+def _configurar_widget(
+    widget: Any,
+    configurar_base: Callable[..., Any],
+    cnf: Any,
+    opcoes: dict[str, Any],
+) -> Any:
+    if cnf is not None:
+        if isinstance(cnf, dict):
+            opcoes = {**cnf, **opcoes}
+        else:
+            return configurar_base(widget, cnf)
+    return configurar_base(widget, **_adaptar_opcoes(opcoes))
+
+
+class _Janela(_ctk.CTk):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **_adaptar_opcoes(kwargs))
+
     def configure(self, cnf: Any = None, **kwargs: Any) -> Any:
-        configurar_pai = getattr(super(), "configure")
-        if cnf is not None:
-            if isinstance(cnf, dict):
-                kwargs = {**cnf, **kwargs}
-            else:
-                return configurar_pai(cnf)
-        return configurar_pai(**_adaptar_opcoes(kwargs))
+        return _configurar_widget(self, _ctk.CTk.configure, cnf, kwargs)
 
     config = configure
 
 
-class _Janela(_ConfiguraCores, _ctk.CTk):
+class _JanelaSecundaria(_ctk.CTkToplevel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **_adaptar_opcoes(kwargs))
 
+    def configure(self, cnf: Any = None, **kwargs: Any) -> Any:
+        return _configurar_widget(self, _ctk.CTkToplevel.configure, cnf, kwargs)
 
-class _JanelaSecundaria(_ConfiguraCores, _ctk.CTkToplevel):
+    config = configure
+
+
+class _Frame(_ctk.CTkFrame):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **_adaptar_opcoes(kwargs))
 
+    def configure(self, cnf: Any = None, **kwargs: Any) -> Any:
+        return _configurar_widget(self, _ctk.CTkFrame.configure, cnf, kwargs)
 
-class _Frame(_ConfiguraCores, _ctk.CTkFrame):
+    config = configure
+
+
+class _Label(_ctk.CTkLabel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **_adaptar_opcoes(kwargs))
 
+    def configure(self, cnf: Any = None, **kwargs: Any) -> Any:
+        return _configurar_widget(self, _ctk.CTkLabel.configure, cnf, kwargs)
 
-class _Label(_ConfiguraCores, _ctk.CTkLabel):
+    config = configure
+
+
+class _Button(_ctk.CTkButton):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **_adaptar_opcoes(kwargs))
 
+    def configure(self, cnf: Any = None, **kwargs: Any) -> Any:
+        return _configurar_widget(self, _ctk.CTkButton.configure, cnf, kwargs)
 
-class _Button(_ConfiguraCores, _ctk.CTkButton):
+    config = configure
+
+
+class _Entry(_ctk.CTkEntry):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **_adaptar_opcoes(kwargs))
 
+    def configure(self, cnf: Any = None, **kwargs: Any) -> Any:
+        return _configurar_widget(self, _ctk.CTkEntry.configure, cnf, kwargs)
 
-class _Entry(_ConfiguraCores, _ctk.CTkEntry):
+    config = configure
+
+
+class _RadioButton(_ctk.CTkRadioButton):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **_adaptar_opcoes(kwargs))
 
+    def configure(self, cnf: Any = None, **kwargs: Any) -> Any:
+        return _configurar_widget(self, _ctk.CTkRadioButton.configure, cnf, kwargs)
 
-class _RadioButton(_ConfiguraCores, _ctk.CTkRadioButton):
+    config = configure
+
+
+class _OptionMenu(_ctk.CTkOptionMenu):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **_adaptar_opcoes(kwargs))
 
+    def configure(self, cnf: Any = None, **kwargs: Any) -> Any:
+        return _configurar_widget(self, _ctk.CTkOptionMenu.configure, cnf, kwargs)
 
-class _OptionMenu(_ConfiguraCores, _ctk.CTkOptionMenu):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **_adaptar_opcoes(kwargs))
+    config = configure
 
 
 class _TkNamespace:
