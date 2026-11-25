@@ -17,7 +17,7 @@ from api_client import (
 
 logger = logging.getLogger(__name__)
 
-def tela_vendas():
+def tela_vendas(ao_fechar=None):
     """Cria e exibe a tela de registro de vendas"""
     logger.info("Tela de vendas aberta")
     
@@ -30,6 +30,13 @@ def tela_vendas():
     except tk.TclError:
         janela_vendas.after(100, lambda: janela_vendas.attributes("-zoomed", True))
     janela_vendas.configure(bg="#f0f0f0")
+
+    def fechar_janela():
+        janela_vendas.destroy()
+        if ao_fechar is not None:
+            ao_fechar()
+
+    janela_vendas.protocol("WM_DELETE_WINDOW", fechar_janela)
     
     # Frame superior - Seleção de produto
     janela_vendas.grid_columnconfigure(0, weight=1)
@@ -541,7 +548,7 @@ def tela_vendas():
                                 width=280, height=64, corner_radius=16)
     botao_registrar.pack(side=tk.LEFT, padx=10)
 
-    botao_cancelar = tk.Button(frame_botoes, text="Cancelar", command=janela_vendas.destroy,
+    botao_cancelar = tk.Button(frame_botoes, text="Cancelar", command=fechar_janela,
                                bg="#b91c1c", fg="white", font=("Segoe UI", 18, "bold"),
                                width=280, height=64, corner_radius=16)
     botao_cancelar.pack(side=tk.LEFT, padx=10)

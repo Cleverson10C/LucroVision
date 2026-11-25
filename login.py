@@ -2,6 +2,7 @@ from ui_compat import tk
 from tkinter import messagebox
 from database import conectar
 import dashboard
+import vendas
 import logging
 from api_client import (api_habilitada, bootstrap_necessario, cadastrar_usuario as api_cadastrar_usuario,
                         login as api_login, perfil_atual as api_perfil_atual)
@@ -37,12 +38,12 @@ def verificar_login(usuario, senha):
     if api_habilitada():
         try:
             autenticado = api_login(usuario, senha)
-            if autenticado and api_perfil_atual() != "admin":
-                logger.warning("Usuário sem perfil administrativo tentou abrir o painel")
-                api_encerrar_sessao()
-                return False
             if autenticado:
-                logger.info("Login via API realizado com sucesso para usuario '%s'", usuario)
+                logger.info(
+                    "Login via API realizado para usuario '%s' com perfil '%s'",
+                    usuario,
+                    api_perfil_atual(),
+                )
             else:
                 logger.warning("Falha de login via API para usuario '%s'", usuario)
             return autenticado
@@ -62,9 +63,6 @@ def verificar_login(usuario, senha):
 
     funcionario_id, senha_armazenada, perfil = funcionario_encontrado
     _perfil_local = perfil or "caixa"
-    if _perfil_local != "admin":
-        conexao_banco.close()
-        return False
     senha_armazenada = senha_armazenada or ""
 
     # Suporta usuários antigos com senha em texto puro e migra para hash no primeiro login.
@@ -178,7 +176,7 @@ def tela_login():
     logger.info("Tela de login iniciada")
     
     def autenticar_usuario():
-        """Valida as credenciais e abre o dashboard se correto"""
+        """Valida as credenciais e abre a tela permitida pelo perfil."""
         nome_usuario = campo_usuario.get().strip()
         senha_usuario = campo_senha.get().strip()
         
@@ -188,10 +186,20 @@ def tela_login():
             return
         
         if verificar_login(nome_usuario, senha_usuario):
-            logger.info("Usuario '%s' autenticado. Abrindo dashboard.", nome_usuario)
+            perfil = perfil_atual()
+            logger.info("Usuario '%s' autenticado com perfil '%s'.", nome_usuario, perfil)
             messagebox.showinfo("Login", "Login realizado com sucesso!")
-            janela_login.destroy()
-            dashboard.abrir_dashboard()
+            if perfil == "admin":
+                janela_login.destroy()
+                dashboard.abrir_dashboard()
+            elif perfil == "caixa":
+                janela_login.withdraw()
+                vendas.tela_vendas(ao_fechar=janela_login.destroy)
+            else:
+                logger.error("Acesso negado para perfil desconhecido '%s'.", perfil)
+                if api_habilitada():
+                    api_encerrar_sessao()
+                messagebox.showerror("Acesso negado", "O perfil deste usuário não é válido.")
         else:
             logger.warning("Autenticacao negada para usuario '%s'", nome_usuario)
             messagebox.showerror("Erro", "Usuário ou senha inválidos.")
