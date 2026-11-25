@@ -20,8 +20,9 @@ def obter_caminho_recurso(arquivo):
 
     if getattr(sys, "frozen", False):
         # PyInstaller
-        if hasattr(sys, "_MEIPASS"):
-            caminhos_base.append(sys._MEIPASS)
+        diretorio_meipass = getattr(sys, "_MEIPASS", None)
+        if diretorio_meipass:
+            caminhos_base.append(diretorio_meipass)
         # cx_Freeze (ou fallback em executável)
         caminhos_base.append(os.path.dirname(sys.executable))
 
@@ -107,7 +108,7 @@ def abrir_dashboard():
         caminho_logo = obter_caminho_recurso("Logo.png")
         if os.path.exists(caminho_logo):
             logo_img = Image.open(caminho_logo)
-            logo_img = logo_img.resize((108, 108), Image.LANCZOS)
+            logo_img = logo_img.resize((108, 108), Image.Resampling.LANCZOS)
             logo_tk = CTkImage(light_image=logo_img, dark_image=logo_img, size=(108, 108))
             logger.info("Logo carregada com sucesso de %s", caminho_logo)
     except Exception:
