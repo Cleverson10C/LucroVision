@@ -2,6 +2,7 @@
 
 import tkinter as _tk
 from tkinter import ttk
+from typing import Any
 
 import customtkinter as _ctk
 
@@ -10,7 +11,7 @@ _ctk.set_appearance_mode("light")
 _ctk.set_default_color_theme("blue")
 
 
-def _adaptar_opcoes(opcoes):
+def _adaptar_opcoes(opcoes: dict[str, Any]) -> dict[str, Any]:
     opcoes = dict(opcoes)
     if "bg" in opcoes:
         opcoes["fg_color"] = opcoes.pop("bg")
@@ -23,13 +24,14 @@ def _adaptar_opcoes(opcoes):
 
 
 class _ConfiguraCores:
-    def configure(self, cnf=None, **kwargs):
+    def configure(self, cnf: Any = None, **kwargs: Any) -> Any:
+        configurar_pai = getattr(super(), "configure")
         if cnf is not None:
             if isinstance(cnf, dict):
                 kwargs = {**cnf, **kwargs}
             else:
-                return super().configure(cnf)
-        return super().configure(**_adaptar_opcoes(kwargs))
+                return configurar_pai(cnf)
+        return configurar_pai(**_adaptar_opcoes(kwargs))
 
     config = configure
 
@@ -90,14 +92,14 @@ class _TkNamespace:
     Scrollbar = _tk.Scrollbar
     Listbox = _tk.Listbox
 
-    def __getattr__(self, nome):
+    def __getattr__(self, nome: str) -> Any:
         return getattr(_tk, nome)
 
 
 tk = _TkNamespace()
 
 
-def configurar_tabelas():
+def configurar_tabelas() -> None:
     """Aplica um tema claro coerente às tabelas ttk que permanecem no app."""
     estilo = ttk.Style()
     try:
