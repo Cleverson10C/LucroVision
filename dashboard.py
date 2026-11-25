@@ -230,9 +230,9 @@ def abrir_dashboard():
     frame_header.pack(fill=tk.X)
     # A arte já contém o nome LucroVision; mantemos só a imagem no cabeçalho.
     frame_logo = tk.Frame(frame_header, bg="#FFFFFF")
-    frame_logo.pack(expand=True)
+    frame_logo.pack(side=tk.LEFT, padx=16, pady=4)
     if logo_tk is not None:
-        label_logo = tk.Label(frame_logo, image=logo_tk, bg="#FFFFFF")
+        label_logo = tk.Label(frame_logo, text="", image=logo_tk, bg="#FFFFFF")
         label_logo.pack(padx=4, pady=4)
     else:
         tk.Label(frame_logo, text="LV", font=("Segoe UI", 28, "bold"), bg="#FFFFFF", fg="#2c3e50").pack(padx=4, pady=4)
