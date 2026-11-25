@@ -1,19 +1,46 @@
-import tkinter as tk
+from ui_compat import tk
 from tkinter import messagebox
 from database import conectar
 import dashboard
 import logging
-from api_client import api_habilitada, cadastrar_usuario as api_cadastrar_usuario, login as api_login
+from api_client import (api_habilitada, bootstrap_necessario, cadastrar_usuario as api_cadastrar_usuario,
+                        login as api_login, perfil_atual as api_perfil_atual)
+from api_client import encerrar_sessao as api_encerrar_sessao
 from security import gerar_hash_senha, verificar_hash_senha
 logger = logging.getLogger(__name__)
+_perfil_local = ""
+
+
+def perfil_atual():
+    return api_perfil_atual() if api_habilitada() else _perfil_local
+
+
+def _cadastrar_usuario_local(usuario, senha):
+    conexao = conectar()
+    try:
+        cursor = conexao.cursor()
+        if cursor.execute("SELECT COUNT(*) FROM funcionarios").fetchone()[0] > 0:
+            raise ValueError("O cadastro inicial já foi concluído. Cadastros adicionais exigem um administrador.")
+        cursor.execute(
+            "INSERT INTO funcionarios (usuario, senha, perfil) VALUES (?, ?, 'admin')",
+            (usuario, gerar_hash_senha(senha)),
+        )
+        conexao.commit()
+    finally:
+        conexao.close()
 
 
 def verificar_login(usuario, senha):
     """Verifica se o usuário e senha são válidos no banco de dados."""
+    global _perfil_local
     logger.info("Tentativa de login para usuario '%s'", usuario)
     if api_habilitada():
         try:
             autenticado = api_login(usuario, senha)
+            if autenticado and api_perfil_atual() != "admin":
+                logger.warning("Usuário sem perfil administrativo tentou abrir o painel")
+                api_encerrar_sessao()
+                return False
             if autenticado:
                 logger.info("Login via API realizado com sucesso para usuario '%s'", usuario)
             else:
@@ -25,7 +52,7 @@ def verificar_login(usuario, senha):
 
     conexao_banco = conectar()
     cursor_banco = conexao_banco.cursor()
-    cursor_banco.execute("SELECT id, senha FROM funcionarios WHERE usuario=?", (usuario,))
+    cursor_banco.execute("SELECT id, senha, perfil FROM funcionarios WHERE usuario=?", (usuario,))
     funcionario_encontrado = cursor_banco.fetchone()
 
     if not funcionario_encontrado:
@@ -33,7 +60,11 @@ def verificar_login(usuario, senha):
         conexao_banco.close()
         return False
 
-    funcionario_id, senha_armazenada = funcionario_encontrado
+    funcionario_id, senha_armazenada, perfil = funcionario_encontrado
+    _perfil_local = perfil or "caixa"
+    if _perfil_local != "admin":
+        conexao_banco.close()
+        return False
     senha_armazenada = senha_armazenada or ""
 
     # Suporta usuários antigos com senha em texto puro e migra para hash no primeiro login.
@@ -86,44 +117,28 @@ def cadastrar_usuario():
             messagebox.showerror("Erro", "As senhas não coincidem!")
             return
         
-        conexao_banco = None
-        cursor_banco = None
-        if not api_habilitada():
-            # Verificar se usuário já existe
-            conexao_banco = conectar()
-            cursor_banco = conexao_banco.cursor()
-            cursor_banco.execute("SELECT * FROM funcionarios WHERE usuario=?", (novo_usuario,))
-            usuario_existente = cursor_banco.fetchone()
-            
-            if usuario_existente:
-                logger.warning("Cadastro de usuario falhou: usuario '%s' ja existe", novo_usuario)
-                messagebox.showerror("Erro", "Usuário já cadastrado!")
-                conexao_banco.close()
+        if api_habilitada():
+            try:
+                if not bootstrap_necessario():
+                    messagebox.showerror("Acesso restrito", "O cadastro inicial já foi concluído. Peça ao administrador para criar usuários.")
+                    return
+            except Exception as erro:
+                messagebox.showerror("Erro de conexão", f"Não foi possível verificar o servidor: {erro}")
                 return
-        
+
         # Cadastrar novo usuário
         try:
             logger.info("Tentando cadastrar usuario '%s'", novo_usuario)
             if api_habilitada():
-                api_cadastrar_usuario(novo_usuario, nova_senha)
+                api_cadastrar_usuario(novo_usuario, nova_senha, "admin")
             else:
-                senha_hash = gerar_hash_senha(nova_senha)
-                cursor_banco.execute(
-                    "INSERT INTO funcionarios (usuario, senha) VALUES (?, ?)",
-                    (novo_usuario, senha_hash),
-                )
-                conexao_banco.commit()
-                conexao_banco.close()
+                _cadastrar_usuario_local(novo_usuario, nova_senha)
             logger.info("Usuario '%s' cadastrado com sucesso", novo_usuario)
             messagebox.showinfo("Sucesso", "Usuário cadastrado com sucesso!")
             janela_cadastro.destroy()
         except Exception as erro:
             logger.exception("Erro ao cadastrar usuario '%s': %s", novo_usuario, erro)
             messagebox.showerror("Erro", f"Erro ao cadastrar usuário: {str(erro)}")
-            try:
-                conexao_banco.close()
-            except Exception as exc:
-                logger.exception("Falha ao fechar conexao apos erro de cadastro: %s", exc)
     
     janela_cadastro = tk.Toplevel()
     janela_cadastro.title("Cadastrar Novo Usuário")
@@ -205,11 +220,19 @@ def tela_login():
              bg="#3498db", fg="white", font=("Arial", 11, "bold"), 
              padx=40, pady=8).pack(pady=20)
     
-    tk.Label(janela_login, text="Não tem cadastro?", bg="#f0f0f0", 
-             font=("Arial", 10)).pack()
-    
-    tk.Button(janela_login, text="Cadastrar novo usuário", command=cadastrar_usuario, 
-             bg="#27ae60", fg="white", font=("Arial", 11, "bold"), 
-             padx=20, pady=5).pack(pady=5)
+    inicializacao_pendente = False
+    try:
+        if api_habilitada():
+            inicializacao_pendente = bootstrap_necessario()
+        else:
+            conexao = conectar()
+            inicializacao_pendente = conexao.execute("SELECT COUNT(*) FROM funcionarios").fetchone()[0] == 0
+            conexao.close()
+    except Exception:
+        logger.exception("Não foi possível consultar estado de configuração inicial")
+    if inicializacao_pendente:
+        tk.Label(janela_login, text="Primeira configuração: crie a conta administradora.", bg="#f0f0f0", font=("Arial", 10)).pack()
+        tk.Button(janela_login, text="Criar administrador", command=cadastrar_usuario,
+                  bg="#27ae60", fg="white", font=("Arial", 11, "bold"), padx=20, pady=5).pack(pady=5)
 
     janela_login.mainloop()

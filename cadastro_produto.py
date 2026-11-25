@@ -1,4 +1,4 @@
-import tkinter as tk
+from ui_compat import tk
 from tkinter import messagebox
 from database import conectar
 import logging
@@ -64,8 +64,11 @@ def tela_cadastro():
             # Converter valores monetários com tratamento de vírgula
             preco_custo_produto = converter_valor_monetario(campo_preco_custo.get())
             preco_venda_produto = converter_valor_monetario(campo_preco_venda.get())
-            quantidade_produto = int(campo_quantidade.get())
-            estoque_minimo_produto = int(campo_estoque_minimo.get())
+            categoria_digitada = campo_categoria.get().strip().lower()
+            usa_peso = categoria_digitada in {"carnes", "frios", "padaria", "hortifruti"}
+            converter_quantidade = (lambda texto: float(texto.replace(",", "."))) if usa_peso else int
+            quantidade_produto = converter_quantidade(campo_quantidade.get().strip())
+            estoque_minimo_produto = converter_quantidade(campo_estoque_minimo.get().strip())
             
             # Validações de campos obrigatórios
             nome_produto = campo_nome.get().strip()

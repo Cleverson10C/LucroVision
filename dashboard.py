@@ -1,14 +1,12 @@
-import tkinter as tk
-from tkinter import ttk
+from ui_compat import tk, ttk, configurar_tabelas
 import cadastro_produto
 import estoque
 import relatorios
 import vendas
 from database import conectar
 from datetime import datetime, timedelta
-from tkinter import PhotoImage
 from PIL import Image, ImageTk
-from api_client import api_habilitada, dashboard_dados
+from api_client import api_habilitada, dashboard_dados, cadastrar_usuario as api_cadastrar_usuario
 import os
 import sys
 import logging
@@ -41,9 +39,53 @@ def obter_caminho_recurso(arquivo):
     logger.warning("Recurso '%s' nao encontrado. Usando fallback %s", arquivo, fallback)
     return fallback
 
+def gerenciar_usuarios():
+    """Cadastro administrativo de usuários. A API repete a checagem de permissão."""
+    from tkinter import messagebox
+    from security import gerar_hash_senha
+
+    janela_usuario = tk.Toplevel()
+    janela_usuario.title("Cadastrar usuário")
+    janela_usuario.geometry("360x300")
+    tk.Label(janela_usuario, text="Novo usuário", font=("Arial", 13, "bold")).pack(pady=12)
+    tk.Label(janela_usuario, text="Usuário").pack()
+    campo_usuario = tk.Entry(janela_usuario, width=30)
+    campo_usuario.pack(pady=4)
+    tk.Label(janela_usuario, text="Senha").pack()
+    campo_senha = tk.Entry(janela_usuario, width=30, show="*")
+    campo_senha.pack(pady=4)
+    tk.Label(janela_usuario, text="Perfil").pack()
+    perfil = tk.StringVar(value="caixa")
+    tk.OptionMenu(janela_usuario, variable=perfil, values=("caixa", "admin"), width=220).pack(pady=4)
+
+    def salvar():
+        usuario, senha = campo_usuario.get().strip(), campo_senha.get().strip()
+        if len(usuario) < 4 or len(senha) < 4:
+            messagebox.showerror("Dados inválidos", "Usuário e senha devem ter pelo menos 4 caracteres.", parent=janela_usuario)
+            return
+        try:
+            if api_habilitada():
+                api_cadastrar_usuario(usuario, senha, perfil.get())
+            else:
+                conexao = conectar()
+                try:
+                    conexao.execute("INSERT INTO funcionarios (usuario, senha, perfil) VALUES (?, ?, ?)",
+                                    (usuario, gerar_hash_senha(senha), perfil.get()))
+                    conexao.commit()
+                finally:
+                    conexao.close()
+            messagebox.showinfo("Sucesso", "Usuário cadastrado.", parent=janela_usuario)
+            janela_usuario.destroy()
+        except Exception as erro:
+            messagebox.showerror("Erro", f"Não foi possível cadastrar o usuário: {erro}", parent=janela_usuario)
+
+    tk.Button(janela_usuario, text="Cadastrar", command=salvar, bg="#27ae60", fg="white").pack(pady=14)
+
+
 def abrir_dashboard():
     logger.info("Abrindo dashboard")
     janela = tk.Tk()
+    configurar_tabelas()
     janela.title("Painel de Gestão de Produtos — LucroVision")
     janela.geometry("1100x700")
     # janela.resizable(True, True)
@@ -296,6 +338,7 @@ def abrir_dashboard():
     criar_botao(frame_botoes, "➕ Cadastrar Produto", cadastro_produto.tela_cadastro, "#27ae60", desabilitar_apos_clique=True, reabilitar_ao_fechar=True)
     criar_botao(frame_botoes, "📦 Ver Estoque", estoque.tela_estoque, "#2980b9", desabilitar_apos_clique=True, reabilitar_ao_fechar=True)
     criar_botao(frame_botoes, "📊 Relatórios", relatorios.tela_relatorios, "#8e44ad", desabilitar_apos_clique=True, reabilitar_ao_fechar=True)
+    criar_botao(frame_botoes, "👤 Usuários", gerenciar_usuarios, "#34495e", desabilitar_apos_clique=True, reabilitar_ao_fechar=True)
     criar_botao(frame_botoes, "🔄 Atualizar Dados", atualizar_dashboard, "#f39c12")
     criar_botao(frame_botoes, "🚪 Sair do Sistema", janela.destroy, "#c0392b")
 

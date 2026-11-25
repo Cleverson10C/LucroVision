@@ -1,200 +1,135 @@
 # LucroVision
 
-Sistema desktop de gerenciamento de estoque e vendas em Python, com interface Tkinter e banco SQLite.
+Sistema desktop para gestão de produtos, estoque e vendas, feito em Python. A interface usa CustomTkinter, os dados ficam em SQLite e a API FastAPI permite compartilhar o mesmo banco entre o computador administrativo e os caixas.
 
-## Visão geral
+## Recursos
 
-O LucroVision centraliza operações de cadastro de produtos, controle de estoque, registro de vendas e visualização de indicadores de desempenho.
-
-## Funcionalidades
-
-- Login e cadastro de usuários (local ou via API), com hash de senha (`PBKDF2-SHA256`) e migração automática de senha legada
-- Dashboard com métricas em tempo real:
-  - Total de produtos
-  - Produtos com estoque baixo
-  - Total de itens em estoque
-  - Vendas no mês
-  - Valor estimado do estoque
-- Ranking de produtos mais vendidos (últimos 30 dias)
-- Lista de produtos próximos ao vencimento
-- Cadastro de produtos com validações:
-  - Nome, categoria, código de barras, preços, quantidade, estoque mínimo e validade
-  - Conversão de validade `MM/YYYY` para `YYYY-MM`
-  - Atualização de produto existente por nome com média ponderada de preço
-- Registro de vendas:
-  - Busca por nome
-  - Leitura por código de barras
-  - Venda com múltiplos itens
-  - Atualização automática do estoque
-- Controle de estoque com filtros por status e categoria
-- Relatórios de lucratividade mensal e anual
-- Modo cliente-servidor opcional para operação multi-caixa (API FastAPI)
-- Modo Caixa dedicado (somente vendas) para uso no PDV
-- Logging estruturado em arquivo para facilitar troubleshooting
-- Testes automatizados para regras críticas (login, estoque e relatórios)
+- Interface desktop com tema claro, controles arredondados e tabelas formatadas.
+- Login com senhas protegidas por PBKDF2-SHA256 e migração de senhas antigas no primeiro acesso.
+- Perfis `admin` e `caixa`, validados também pela API.
+- Cadastro e atualização de produtos, código de barras, validade e média ponderada de custo/preço.
+- Estoque baixo, dashboard, itens mais vendidos, produtos próximos do vencimento e relatórios de lucratividade.
+- Vendas com múltiplos produtos, leitor de código de barras e baixa de estoque.
+- Quantidades fracionadas para Carnes, Frios, Padaria e Hortifruti.
+- API central para compartilhar dados entre computadores na rede local.
+- Cópia de segurança consistente do banco, automática a cada 24 horas.
 
 ## Tecnologias
 
-- Python 3
-- Tkinter
-- SQLite3
-- Pillow (logo no dashboard)
-- Requests
-- FastAPI
-- Uvicorn
-- Pydantic
-- Pytest
+- Python 3.10 ou superior
+- CustomTkinter 6.0.0 e Tkinter/Tcl-Tk
+- SQLite
+- FastAPI, Uvicorn e Pydantic
+- Requests e Pillow
+- cx_Freeze para gerar executáveis Windows
 
-## Requisitos
+## Instalação para desenvolvimento
 
-- Python 3.10+
-- `pip`
-
-## Instalação
-
-1. Clone o projeto:
-
-```bash
-git clone <url-do-seu-repositorio>
-cd LucroVision
-```
-
-2. Crie e ative um ambiente virtual (recomendado):
+No Windows, abra o PowerShell na pasta do projeto:
 
 ```powershell
 python -m venv venv
 .\venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
 ```
 
-3. Instale dependências:
-
-```powershell
-pip install -r requirements.txt
-```
-
-## Como executar
+Inicie o painel administrativo local:
 
 ```powershell
 python main.py
 ```
 
-Na primeira execução, as tabelas do banco são criadas automaticamente.
+No primeiro acesso local, escolha **Criar administrador** para configurar a conta inicial.
 
-## Testes
+## Operação em dois computadores
 
-```powershell
-pytest
-```
+O computador do administrador também hospeda a API e o banco central. Os computadores devem estar na mesma rede local.
 
-## Modo servidor local (API central)
+### Computador servidor/administrador
 
-Para operar com vários caixas, execute um servidor local (API) em uma máquina central da loja:
-
-1. Instale dependências:
+Inicie a API em um terminal e mantenha-o aberto:
 
 ```powershell
-pip install -r requirements.txt
-```
-
-2. Inicie a API:
-
-```powershell
+.\venv\Scripts\Activate.ps1
 python -m uvicorn api_server:app --host 0.0.0.0 --port 8000
 ```
 
-3. Em cada caixa/cliente, configure a URL da API antes de abrir o sistema:
+Consulte o IPv4 do computador com `ipconfig`. Em outro terminal, inicie o painel apontando para esse IP:
 
 ```powershell
-$env:LUCROVISOR_API_URL = "http://IP_DO_SERVIDOR:8000"
+.\venv\Scripts\Activate.ps1
+$env:LUCROVISOR_API_URL = "http://192.168.0.10:8000"
 python main.py
 ```
 
-Quando `LUCROVISOR_API_URL` está configurada, o cliente usa a API central para login, vendas, estoque, cadastro, dashboard e relatórios.
+Troque `192.168.0.10` pelo IPv4 real. No primeiro acesso à base central, crie o administrador pela tela de login.
 
-## Estrutura do projeto
+### Computador caixa
 
-```text
-LucroVision/
-|- main.py                # Ponto de entrada
-|- api_server.py          # API central para modo multi-caixa
-|- api_client.py          # Cliente HTTP usado pela aplicação desktop
-|- security.py            # Hash e verificação de senha
-|- database.py            # Conexão e criação/migração de tabelas
-|- login.py               # Login e cadastro de usuários
-|- dashboard.py           # Painel principal
-|- cadastro_produto.py    # Cadastro e atualização de produtos
-|- vendas.py              # Registro de vendas
-|- estoque.py             # Visualização e filtros de estoque
-|- relatorios.py          # Relatórios de lucro
-|- relatorios_data.py     # Camada de dados dos relatórios (API/local)
-|- caixa_main.py          # Entrypoint do modo Caixa (somente vendas)
-|- setup_caixa.py         # Build do executável do Caixa
-|- tests/                 # Testes automatizados (pytest)
-|- requirements.txt
-|- setup.py               # Build de executável (cx_Freeze)
-|- Logo.png / Logo.ico
-|- licenca.txt
-```
-
-## Banco de dados
-
-Arquivo padrão: `comercio.db`
-
-A aplicação resolve o caminho do banco assim:
-
-- Execução como script Python: pasta do projeto
-- Execução como executável: `%LOCALAPPDATA%\\LucroVisor\\comercio.db`
-- Override opcional por variável de ambiente:
+Instale o projeto e as dependências, ou use o executável do caixa. Configure o mesmo endereço do servidor:
 
 ```powershell
-$env:LUCROVISOR_DB_PATH = "C:\dados\lucrovision\comercio.db"
+.\venv\Scripts\Activate.ps1
+$env:LUCROVISOR_API_URL = "http://192.168.0.10:8000"
+python caixa_main.py
 ```
 
-### Tabelas
+O programa do caixa solicita login. No painel administrativo, abra **Usuários** para cadastrar funcionários com perfil `caixa` ou outros administradores.
 
-- `funcionarios(id, usuario, senha)`
-- `produtos(id, nome, codigo_barras, categoria, preco_custo, preco_venda, quantidade, estoque_minimo, validade)`
-- `vendas(id, produto_id, quantidade, data_venda)`
+| Perfil | Permissões |
+|---|---|
+| `admin` | Dashboard, cadastro de produtos, estoque, relatórios, usuários e vendas |
+| `caixa` | Consultar produtos disponíveis e registrar vendas |
 
-## Observações importantes
+A sessão precisa ser iniciada novamente depois que a API reiniciar. A API usa HTTP sem criptografia: restrinja a porta 8000 à rede privada da loja e não a encaminhe para a internet.
 
-- Senhas novas são salvas com hash seguro e usuários legados são migrados no primeiro login válido.
-- O sistema opera local (SQLite) ou remoto (API), conforme `LUCROVISOR_API_URL`.
-- Existe código de validação de licença em `login.py`, mas ele está comentado.
-- Para categorias como `Carnes`, `Frios`, `Padaria` e `Hortifruti`, o sistema permite operação em kg.
+## Banco de dados e backups
 
-## Troubleshooting
+O arquivo principal chama-se `comercio.db`.
 
-- Erro de Tkinter/Tcl ao abrir o sistema:
-  - Reinstale o Python com suporte Tcl/Tk
-  - Em ambiente local, prefira uma instalação estável do Python
-- Ícone ou logo não carregam no executável:
-  - Verifique se `Logo.png` e `Logo.ico` estão disponíveis no build
+- Ao executar scripts Python, fica na pasta do projeto.
+- No executável, fica em `%LOCALAPPDATA%\LucroVisor\comercio.db`.
+- `LUCROVISOR_DB_PATH` permite definir outro caminho.
 
-## Build de executável (opcional)
+Ao iniciar o painel local ou a API, o LucroVision cria um snapshot SQLite consistente em `backups\comercio-AAAAMMDD-HHMMSS.sqlite3`. Outro backup é criado a cada 24 horas e os arquivos com mais de 30 dias são removidos. Mantenha cópias periódicas em outro disco ou computador.
+
+As tabelas são criadas e migradas na inicialização. Em bancos existentes sem perfil de usuário, a migração atribui `admin` ao usuário mais antigo e `caixa` aos demais. Faça uma cópia do banco antes da primeira atualização.
+
+## Executáveis
+
+Gere o executável administrativo:
 
 ```powershell
 python setup.py build
 ```
 
-## Build do EXE do Caixa (somente vendas)
-
-Arquivos adicionados:
-- `caixa_main.py` (entrypoint do caixa)
-- `setup_caixa.py` (build do executável do caixa)
-- `iniciar_caixa.bat` (atalho para iniciar com `LUCROVISOR_API_URL`)
-
-Gerar o EXE:
+Gere o executável de vendas:
 
 ```powershell
 python setup_caixa.py build
 ```
 
-Após o build, copie para o computador caixa:
-- conteúdo da pasta `build\...`
-- `iniciar_caixa.bat` (ajuste IP/porta da API)
+O build inclui CustomTkinter e os arquivos de tema necessários. Para o caixa, ajuste o IP no arquivo `iniciar_caixa.bat` antes de distribuir.
 
-## Autor
+## Estrutura
 
-Cleverson
+```text
+main.py              Inicialização do painel administrativo
+caixa_main.py        Login e entrada dedicada do caixa
+ui_compat.py         Tema e adaptação dos widgets CustomTkinter
+dashboard.py         Dashboard administrativo
+cadastro_produto.py  Cadastro de produtos
+vendas.py            Registro de vendas
+estoque.py           Consulta e filtros do estoque
+relatorios.py        Relatórios de lucratividade
+api_server.py        API central FastAPI
+api_client.py        Cliente da API
+database.py          SQLite, migrações e backups
+security.py          Hash e validação de senhas
+licenses/            Avisos de licenças de terceiros
+tests/               Testes automatizados existentes
+```
 
+## Licenças de terceiros
+
+CustomTkinter é distribuído sob licença MIT. A licença e o aviso de copyright estão em [`licenses/customtkinter-MIT.txt`](licenses/customtkinter-MIT.txt) e devem acompanhar as distribuições do software. Consulte também as licenças das demais dependências incluídas no executável.

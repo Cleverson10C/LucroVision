@@ -10,10 +10,11 @@ import os
 import sys
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-import tkinter as tk
+from ui_compat import tk
 from tkinter import messagebox
 
 from vendas import tela_vendas
+from api_client import login as api_login, encerrar_sessao as api_logout
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +60,37 @@ if __name__ == "__main__":
         raise SystemExit(1)
 
     root = tk.Tk()
-    root.withdraw()
-    tela_vendas()
+    root.title("Login do Caixa - LucroVision")
+    root.geometry("360x250")
+    root.configure(bg="#f0f0f0")
+    tk.Label(root, text="Acesso ao Caixa", font=("Arial", 14, "bold"), bg="#f0f0f0").pack(pady=16)
+    tk.Label(root, text="Usuário", bg="#f0f0f0").pack()
+    campo_usuario = tk.Entry(root, width=30)
+    campo_usuario.pack(pady=4)
+    tk.Label(root, text="Senha", bg="#f0f0f0").pack()
+    campo_senha = tk.Entry(root, width=30, show="*")
+    campo_senha.pack(pady=4)
+
+    def entrar(event=None):
+        try:
+            if not api_login(campo_usuario.get().strip(), campo_senha.get()):
+                messagebox.showerror("Acesso negado", "Usuário ou senha inválidos.", parent=root)
+                return
+            root.withdraw()
+            janela_venda = tela_vendas()
+
+            def sair_do_caixa(event=None):
+                if event is not None and event.widget is not janela_venda:
+                    return
+                api_logout()
+                root.deiconify()
+                campo_senha.delete(0, tk.END)
+
+            janela_venda.bind("<Destroy>", sair_do_caixa, add="+")
+            janela_venda.protocol("WM_DELETE_WINDOW", janela_venda.destroy)
+        except Exception as erro:
+            messagebox.showerror("Falha de conexão", f"Não foi possível acessar a API: {erro}", parent=root)
+
+    campo_senha.bind("<Return>", entrar)
+    tk.Button(root, text="Entrar", command=entrar, bg="#27ae60", fg="white", padx=25, pady=6).pack(pady=14)
     root.mainloop()

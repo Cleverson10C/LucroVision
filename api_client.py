@@ -4,6 +4,21 @@ from typing import Any, Dict, List
 import requests
 
 logger = logging.getLogger(__name__)
+_access_token = ""
+_perfil = ""
+
+def perfil_atual() -> str:
+    return _perfil
+
+def encerrar_sessao() -> None:
+    global _access_token, _perfil
+    if _access_token:
+        try:
+            _request("POST", "/auth/logout")
+        except requests.RequestException:
+            logger.warning("Não foi possível revogar a sessão no servidor")
+    _access_token = ""
+    _perfil = ""
 
 def api_url() -> str:
     return os.environ.get("LUCROVISOR_API_URL", "").strip().rstrip("/")
@@ -18,16 +33,27 @@ def _request(method: str, path: str, *, params=None, json=None, timeout: int = 8
 
     url = f"{base}{path}"
     logger.debug("API request %s %s", method, url)
-    resposta = requests.request(method, url, params=params, json=json, timeout=timeout)
+    headers = {"Authorization": f"Bearer {_access_token}"} if _access_token else None
+    resposta = requests.request(method, url, params=params, json=json, headers=headers, timeout=timeout)
     resposta.raise_for_status()
     return resposta.json()
 
 def login(usuario: str, senha: str) -> bool:
+    global _access_token, _perfil
     data = _request("POST", "/auth/login", json={"usuario": usuario, "senha": senha})
-    return bool(data.get("autenticado", False))
+    if data.get("autenticado"):
+        _access_token = data.get("access_token", "")
+        _perfil = data.get("perfil", "caixa")
+        return True
+    _access_token = ""
+    _perfil = ""
+    return False
 
-def cadastrar_usuario(usuario: str, senha: str) -> None:
-    _request("POST", "/auth/register", json={"usuario": usuario, "senha": senha})
+def cadastrar_usuario(usuario: str, senha: str, perfil: str = "caixa") -> None:
+    _request("POST", "/auth/register", json={"usuario": usuario, "senha": senha, "perfil": perfil})
+
+def bootstrap_necessario() -> bool:
+    return bool(_request("GET", "/auth/bootstrap-status").get("necessario"))
 
 def dashboard_dados() -> Dict[str, Any]:
     return _request("GET", "/dashboard")

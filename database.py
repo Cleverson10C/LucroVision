@@ -2,10 +2,13 @@ import sqlite3
 import os
 import sys
 import logging
+from datetime import datetime, timedelta
+import threading
 
 NOME_APP = "LucroVisor"
 NOME_BANCO = "comercio.db"
 logger = logging.getLogger(__name__)
+_parar_backup = threading.Event()
 
 
 def _normalizar_categoria(categoria):
@@ -54,6 +57,47 @@ def conectar():
     logger.debug("Abrindo conexao SQLite em %s", caminho)
     return sqlite3.connect(caminho)
 
+
+def criar_backup():
+    """Cria snapshot consistente do banco sem copiar arquivos SQLite a quente."""
+    origem = _caminho_banco()
+    if not os.path.isfile(origem):
+        return None
+    pasta_backups = os.path.join(os.path.dirname(origem), "backups")
+    os.makedirs(pasta_backups, exist_ok=True)
+    nome = f"comercio-{datetime.now().strftime('%Y%m%d-%H%M%S')}.sqlite3"
+    destino = os.path.join(pasta_backups, nome)
+    with sqlite3.connect(origem) as banco_origem, sqlite3.connect(destino) as banco_destino:
+        banco_origem.backup(banco_destino)
+    limite = datetime.now() - timedelta(days=30)
+    for arquivo in os.listdir(pasta_backups):
+        caminho = os.path.join(pasta_backups, arquivo)
+        if arquivo.startswith("comercio-") and arquivo.endswith(".sqlite3"):
+            try:
+                instante = datetime.strptime(arquivo[9:-8], "%Y%m%d-%H%M%S")
+                if instante < limite:
+                    os.remove(caminho)
+            except (ValueError, OSError):
+                logger.warning("Não foi possível verificar backup antigo %s", caminho)
+    logger.info("Backup SQLite criado: %s", destino)
+    return destino
+
+
+def iniciar_backups_automaticos():
+    """Faz backup ao iniciar e depois a cada 24 horas, mantendo 30 dias."""
+    def rotina():
+        while not _parar_backup.is_set():
+            try:
+                criar_backup()
+            except Exception:
+                logger.exception("Falha ao criar backup automático do banco")
+            if _parar_backup.wait(24 * 60 * 60):
+                break
+
+    thread = threading.Thread(target=rotina, name="lucrovision-backup", daemon=True)
+    thread.start()
+    return thread
+
 def criar_tabelas():
     """Cria todas as tabelas necessárias no banco de dados"""
     logger.info("Iniciando criacao/validacao de tabelas e migracoes")
@@ -67,8 +111,18 @@ def criar_tabelas():
         CREATE TABLE IF NOT EXISTS funcionarios (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             usuario TEXT UNIQUE,
-            senha TEXT
+            senha TEXT,
+            perfil TEXT NOT NULL DEFAULT 'caixa'
         )""")
+        colunas_funcionarios = {linha[1] for linha in cursor_banco.execute("PRAGMA table_info(funcionarios)")}
+        if "perfil" not in colunas_funcionarios:
+            cursor_banco.execute("ALTER TABLE funcionarios ADD COLUMN perfil TEXT NOT NULL DEFAULT 'caixa'")
+        cursor_banco.execute("SELECT COUNT(*) FROM funcionarios WHERE perfil = 'admin'")
+        if cursor_banco.fetchone()[0] == 0:
+            cursor_banco.execute("SELECT id FROM funcionarios ORDER BY id LIMIT 1")
+            primeiro_usuario = cursor_banco.fetchone()
+            if primeiro_usuario:
+                cursor_banco.execute("UPDATE funcionarios SET perfil = 'admin' WHERE id = ?", primeiro_usuario)
 
         # Tabela de produtos em estoque
         cursor_banco.execute("""
@@ -79,8 +133,8 @@ def criar_tabelas():
             categoria TEXT,
             preco_custo REAL,
             preco_venda REAL,
-            quantidade INTEGER,
-            estoque_minimo INTEGER,
+            quantidade REAL,
+            estoque_minimo REAL,
             validade TEXT
         )""")
 
@@ -89,7 +143,7 @@ def criar_tabelas():
         CREATE TABLE IF NOT EXISTS vendas (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             produto_id INTEGER,
-            quantidade INTEGER,
+            quantidade REAL,
             data_venda TEXT,
             FOREIGN KEY(produto_id) REFERENCES produtos(id)
         )""")

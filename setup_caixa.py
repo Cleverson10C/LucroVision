@@ -1,6 +1,7 @@
 import logging
 import sys
 from pathlib import Path
+import customtkinter
 from cx_Freeze import Executable, setup
 
 logger = logging.getLogger(__name__)
@@ -25,9 +26,12 @@ if not BAT_PATH.exists():
     )
     logger.info("Arquivo iniciar_caixa.bat criado automaticamente em %s", BAT_PATH)
 
+customtkinter_assets = Path(customtkinter.__file__).resolve().parent / "assets"
+customtkinter_license = BASE_DIR / "licenses" / "customtkinter-MIT.txt"
 build_exe_options = {
-    "packages": ["tkinter", "sqlite3", "requests"],
-    "include_files": ["Logo.png", "Logo.ico", "iniciar_caixa.bat"],
+    "packages": ["tkinter", "sqlite3", "requests", "customtkinter"],
+    "include_files": ["Logo.png", "Logo.ico", "iniciar_caixa.bat", (str(customtkinter_assets), "lib/customtkinter/assets"),
+                      (str(customtkinter_license), "licenses/customtkinter-MIT.txt")],
 }
 
 base = None

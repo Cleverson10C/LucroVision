@@ -3,8 +3,7 @@ Módulo de Controle de Estoque
 Gerencia a visualização e filtragem dos produtos em estoque
 """
 
-import tkinter as tk
-from tkinter import ttk
+from ui_compat import tk, ttk, configurar_tabelas
 from database import conectar
 import datetime
 import logging
@@ -38,6 +37,7 @@ def tela_estoque():
     
     # Criar janela principal do estoque
     janela_estoque = tk.Toplevel()
+    configurar_tabelas()
     janela_estoque.title("Controle de Estoque")
     janela_estoque.geometry("860x600")
 

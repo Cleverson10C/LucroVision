@@ -1,4 +1,4 @@
-import tkinter as tk
+from ui_compat import tk
 import logging
 from relatorios_data import obter_dados_relatorios
 

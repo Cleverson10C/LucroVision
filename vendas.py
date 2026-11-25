@@ -3,8 +3,8 @@ Módulo de Registro de Vendas
 Permite registrar vendas de produtos e atualiza o estoque automaticamente
 """
 
-import tkinter as tk
-from tkinter import ttk, messagebox
+from ui_compat import tk, ttk, configurar_tabelas
+from tkinter import messagebox
 from database import conectar
 from datetime import datetime
 import logging
@@ -22,6 +22,7 @@ def tela_vendas():
     logger.info("Tela de vendas aberta")
     
     janela_vendas = tk.Toplevel()
+    configurar_tabelas()
     janela_vendas.title("Registrar Venda")
     janela_vendas.geometry("1200x780")
     janela_vendas.configure(bg="#f0f0f0")
@@ -489,3 +490,4 @@ def tela_vendas():
     # Carregar produtos inicialmente
     carregar_produtos()
     campo_codigo_barras.focus_set()
+    return janela_vendas

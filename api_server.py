@@ -1,17 +1,34 @@
 import logging
 from datetime import datetime, timedelta
+import secrets
 from typing import List, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
-from database import conectar, criar_tabelas
+from database import conectar, criar_tabelas, iniciar_backups_automaticos
 from security import gerar_hash_senha, verificar_hash_senha
 
 logger = logging.getLogger("lucrovision.api")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(name)s | %(message)s")
 
 app = FastAPI(title="LucroVision API", version="1.0.0")
+_sessoes = {}
+_bearer = HTTPBearer(auto_error=False)
+
+
+def _usuario_atual(credenciais: HTTPAuthorizationCredentials = Depends(_bearer)):
+    usuario = _sessoes.get(credenciais.credentials) if credenciais else None
+    if not usuario:
+        raise HTTPException(status_code=401, detail="Autenticação necessária.")
+    return usuario
+
+
+def _exigir_admin(usuario=Depends(_usuario_atual)):
+    if usuario["perfil"] != "admin":
+        raise HTTPException(status_code=403, detail="Acesso restrito ao administrador.")
+    return usuario
 
 
 class LoginIn(BaseModel):
@@ -22,6 +39,7 @@ class LoginIn(BaseModel):
 class RegisterIn(BaseModel):
     usuario: str
     senha: str
+    perfil: str = "caixa"
 
 
 class VendaItemIn(BaseModel):
@@ -41,8 +59,8 @@ class ProdutoIn(BaseModel):
     codigo_barras: Optional[str] = None
     preco_custo: float
     preco_venda: float
-    quantidade: int
-    estoque_minimo: int
+    quantidade: float
+    estoque_minimo: float
     validade: str
 
 
@@ -54,6 +72,7 @@ def _normalizar_categoria(categoria_texto: str) -> str:
 @app.on_event("startup")
 def startup_event():
     criar_tabelas()
+    iniciar_backups_automaticos()
     logger.info("API inicializada")
 
 
@@ -66,52 +85,86 @@ def health():
 def auth_login(payload: LoginIn):
     conexao_banco = conectar()
     cursor = conexao_banco.cursor()
-    cursor.execute("SELECT id, senha FROM funcionarios WHERE usuario=?", (payload.usuario,))
+    cursor.execute("SELECT id, senha, perfil FROM funcionarios WHERE usuario=?", (payload.usuario,))
     row = cursor.fetchone()
     if not row:
         conexao_banco.close()
         return {"autenticado": False}
 
-    funcionario_id, senha_armazenada = row
+    funcionario_id, senha_armazenada, perfil = row
     senha_armazenada = senha_armazenada or ""
 
     if "$" in senha_armazenada and verificar_hash_senha(payload.senha, senha_armazenada):
         conexao_banco.close()
-        return {"autenticado": True}
+        token = secrets.token_urlsafe(32)
+        _sessoes[token] = {"id": funcionario_id, "usuario": payload.usuario, "perfil": perfil or "caixa"}
+        return {"autenticado": True, "access_token": token, "perfil": perfil or "caixa"}
 
     if senha_armazenada == payload.senha:
         cursor.execute("UPDATE funcionarios SET senha=? WHERE id=?", (gerar_hash_senha(payload.senha), funcionario_id))
         conexao_banco.commit()
         conexao_banco.close()
-        return {"autenticado": True}
+        token = secrets.token_urlsafe(32)
+        _sessoes[token] = {"id": funcionario_id, "usuario": payload.usuario, "perfil": perfil or "caixa"}
+        return {"autenticado": True, "access_token": token, "perfil": perfil or "caixa"}
 
     conexao_banco.close()
     return {"autenticado": False}
 
 
+@app.post("/auth/logout")
+def auth_logout(credenciais: HTTPAuthorizationCredentials = Depends(_bearer)):
+    if credenciais:
+        _sessoes.pop(credenciais.credentials, None)
+    return {"ok": True}
+
+
+@app.get("/auth/bootstrap-status")
+def auth_bootstrap_status():
+    conexao_banco = conectar()
+    try:
+        total = conexao_banco.execute("SELECT COUNT(*) FROM funcionarios").fetchone()[0]
+        return {"necessario": total == 0}
+    finally:
+        conexao_banco.close()
+
+
 @app.post("/auth/register")
-def auth_register(payload: RegisterIn):
+def auth_register(payload: RegisterIn, credenciais: HTTPAuthorizationCredentials = Depends(_bearer)):
     usuario = payload.usuario.strip()
     senha = payload.senha.strip()
 
     if len(usuario) < 4 or len(senha) < 4:
         raise HTTPException(status_code=400, detail="Usuário e senha devem ter pelo menos 4 caracteres.")
 
+    if payload.perfil not in ("admin", "caixa"):
+        raise HTTPException(status_code=400, detail="Perfil deve ser admin ou caixa.")
+
     conexao_banco = conectar()
     cursor = conexao_banco.cursor()
+    cursor.execute("BEGIN IMMEDIATE")
+    total_usuarios = cursor.execute("SELECT COUNT(*) FROM funcionarios").fetchone()[0]
+    if total_usuarios == 0 and credenciais is None:
+        perfil_novo = "admin"
+    else:
+        usuario_atual = _sessoes.get(credenciais.credentials) if credenciais else None
+        if not usuario_atual or usuario_atual["perfil"] != "admin":
+            conexao_banco.close()
+            raise HTTPException(status_code=403, detail="Somente administrador pode cadastrar usuários.")
+        perfil_novo = payload.perfil
     cursor.execute("SELECT 1 FROM funcionarios WHERE usuario=?", (usuario,))
     if cursor.fetchone():
         conexao_banco.close()
         raise HTTPException(status_code=409, detail="Usuário já cadastrado.")
 
-    cursor.execute("INSERT INTO funcionarios (usuario, senha) VALUES (?, ?)", (usuario, gerar_hash_senha(senha)))
+    cursor.execute("INSERT INTO funcionarios (usuario, senha, perfil) VALUES (?, ?, ?)", (usuario, gerar_hash_senha(senha), perfil_novo))
     conexao_banco.commit()
     conexao_banco.close()
     return {"ok": True}
 
 
 @app.get("/dashboard")
-def dashboard():
+def dashboard(_usuario=Depends(_exigir_admin)):
     conexao_banco = conectar()
     cursor = conexao_banco.cursor()
 
@@ -173,7 +226,7 @@ def dashboard():
 
 
 @app.get("/produtos/disponiveis")
-def produtos_disponiveis(filtro: str = ""):
+def produtos_disponiveis(filtro: str = "", _usuario=Depends(_usuario_atual)):
     conexao_banco = conectar()
     cursor = conexao_banco.cursor()
     if filtro:
@@ -212,7 +265,7 @@ def produtos_disponiveis(filtro: str = ""):
 
 
 @app.get("/produtos/codigo/{codigo}")
-def produto_por_codigo(codigo: str):
+def produto_por_codigo(codigo: str, _usuario=Depends(_usuario_atual)):
     conexao_banco = conectar()
     cursor = conexao_banco.cursor()
     cursor.execute(
@@ -240,7 +293,7 @@ def produto_por_codigo(codigo: str):
 
 
 @app.post("/produtos/salvar")
-def produto_salvar(payload: ProdutoIn):
+def produto_salvar(payload: ProdutoIn, _usuario=Depends(_exigir_admin)):
     nome_produto = payload.nome.strip()
     categoria = _normalizar_categoria(payload.categoria)
     codigo_barras = payload.codigo_barras.strip() if payload.codigo_barras else None
@@ -319,7 +372,7 @@ def produto_salvar(payload: ProdutoIn):
 
 
 @app.get("/estoque/categorias")
-def estoque_categorias():
+def estoque_categorias(_usuario=Depends(_exigir_admin)):
     conexao_banco = conectar()
     cursor = conexao_banco.cursor()
     cursor.execute("SELECT DISTINCT categoria FROM produtos WHERE categoria IS NOT NULL AND categoria != ''")
@@ -329,7 +382,7 @@ def estoque_categorias():
 
 
 @app.get("/estoque")
-def estoque_lista(tipo: str = "todos", categoria: str = "Todas"):
+def estoque_lista(tipo: str = "todos", categoria: str = "Todas", _usuario=Depends(_exigir_admin)):
     parametros = []
     filtros_sql = []
     if tipo == "baixo":
@@ -366,7 +419,7 @@ def estoque_lista(tipo: str = "todos", categoria: str = "Todas"):
 
 
 @app.get("/estoque/estatisticas")
-def estoque_stats():
+def estoque_stats(_usuario=Depends(_exigir_admin)):
     conexao_banco = conectar()
     cursor = conexao_banco.cursor()
     cursor.execute("SELECT COUNT(*) FROM produtos")
@@ -384,7 +437,7 @@ def estoque_stats():
 
 
 @app.post("/vendas")
-def vendas_registrar(payload: VendaIn):
+def vendas_registrar(payload: VendaIn, _usuario=Depends(_usuario_atual)):
     if not payload.itens:
         raise HTTPException(status_code=400, detail="Nenhum item informado.")
 
@@ -421,7 +474,7 @@ def vendas_registrar(payload: VendaIn):
 
 
 @app.get("/relatorios")
-def relatorios():
+def relatorios(_usuario=Depends(_exigir_admin)):
     conexao_banco = conectar()
     cursor = conexao_banco.cursor()
 

@@ -10,7 +10,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from api_client import api_habilitada
-from database import criar_tabelas
+from database import criar_tabelas, iniciar_backups_automaticos
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +117,7 @@ if __name__ == "__main__":
     else:
         logger.info("Inicializando estrutura do banco de dados")
         criar_tabelas()
+        iniciar_backups_automaticos()
     
     # Abrir tela de login do sistema (com validação de licença incluída)
     logger.info("Abrindo tela de login")

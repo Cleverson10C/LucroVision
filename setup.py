@@ -1,15 +1,20 @@
 import sys
 import os
 import logging
+from pathlib import Path
+import customtkinter
 from cx_Freeze import setup, Executable
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(name)s | %(message)s")
 
 # Configuração das opções de build
+customtkinter_assets = Path(customtkinter.__file__).resolve().parent / "assets"
+customtkinter_license = Path(__file__).resolve().parent / "licenses" / "customtkinter-MIT.txt"
 build_exe_options = {
-    "packages": ["tkinter", "sqlite3"],
-    "include_files": ["licenca.txt", "Logo.png", "Logo.ico"],  # Arquivos estáticos (não incluir banco)
+    "packages": ["tkinter", "sqlite3", "customtkinter"],
+    "include_files": ["Logo.png", "Logo.ico", (str(customtkinter_assets), "lib/customtkinter/assets"),
+                      (str(customtkinter_license), "licenses/customtkinter-MIT.txt")],
 }
 
 # Detecta base correta para ocultar console no Windows
