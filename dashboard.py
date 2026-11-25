@@ -5,7 +5,8 @@ import relatorios
 import vendas
 from database import conectar
 from datetime import datetime, timedelta
-from PIL import Image, ImageTk
+from PIL import Image
+from customtkinter import CTkImage
 from api_client import api_habilitada, dashboard_dados, cadastrar_usuario as api_cadastrar_usuario
 import os
 import sys
@@ -47,14 +48,14 @@ def gerenciar_usuarios():
     janela_usuario = tk.Toplevel()
     janela_usuario.title("Cadastrar usuário")
     janela_usuario.geometry("360x300")
-    tk.Label(janela_usuario, text="Novo usuário", font=("Arial", 13, "bold")).pack(pady=12)
-    tk.Label(janela_usuario, text="Usuário").pack()
-    campo_usuario = tk.Entry(janela_usuario, width=30)
+    tk.Label(janela_usuario, text="Novo usuário", font=("Segoe UI", 20, "bold")).pack(pady=12)
+    tk.Label(janela_usuario, text="Usuário", font=("Segoe UI", 14)).pack()
+    campo_usuario = tk.Entry(janela_usuario, width=300, height=36)
     campo_usuario.pack(pady=4)
-    tk.Label(janela_usuario, text="Senha").pack()
-    campo_senha = tk.Entry(janela_usuario, width=30, show="*")
+    tk.Label(janela_usuario, text="Senha", font=("Segoe UI", 14)).pack()
+    campo_senha = tk.Entry(janela_usuario, width=300, height=36, show="*")
     campo_senha.pack(pady=4)
-    tk.Label(janela_usuario, text="Perfil").pack()
+    tk.Label(janela_usuario, text="Perfil", font=("Segoe UI", 14)).pack()
     perfil = tk.StringVar(value="caixa")
     tk.OptionMenu(janela_usuario, variable=perfil, values=("caixa", "admin"), width=220).pack(pady=4)
 
@@ -79,7 +80,9 @@ def gerenciar_usuarios():
         except Exception as erro:
             messagebox.showerror("Erro", f"Não foi possível cadastrar o usuário: {erro}", parent=janela_usuario)
 
-    tk.Button(janela_usuario, text="Cadastrar", command=salvar, bg="#27ae60", fg="white").pack(pady=14)
+    tk.Button(janela_usuario, text="Cadastrar", command=salvar, bg="#15803d", fg="white",
+              font=("Segoe UI", 16, "bold"), height=42, corner_radius=12).pack(pady=14)
+    return janela_usuario
 
 
 def abrir_dashboard():
@@ -88,8 +91,15 @@ def abrir_dashboard():
     configurar_tabelas()
     janela.title("Painel de Gestão de Produtos — LucroVision")
     janela.geometry("1100x700")
-    # janela.resizable(True, True)
+    try:
+        janela.state("zoomed")
+    except tk.TclError:
+        janela.after(100, lambda: janela.attributes("-zoomed", True))
     janela.configure(bg="#f0f0f0")
+
+    estilo_tabelas = ttk.Style()
+    estilo_tabelas.configure("Treeview", rowheight=38, font=("Segoe UI", 12))
+    estilo_tabelas.configure("Treeview.Heading", font=("Segoe UI", 13, "bold"))
 
     # Carregar e redimensionar o logo (com fallback para evitar tela em branco no EXE)
     logo_tk = None
@@ -97,8 +107,8 @@ def abrir_dashboard():
         caminho_logo = obter_caminho_recurso("Logo.png")
         if os.path.exists(caminho_logo):
             logo_img = Image.open(caminho_logo)
-            logo_img = logo_img.resize((80, 80), Image.LANCZOS)
-            logo_tk = ImageTk.PhotoImage(logo_img)
+            logo_img = logo_img.resize((108, 108), Image.LANCZOS)
+            logo_tk = CTkImage(light_image=logo_img, dark_image=logo_img, size=(108, 108))
             logger.info("Logo carregada com sucesso de %s", caminho_logo)
     except Exception:
         logger.exception("Falha ao carregar logo")
@@ -214,22 +224,18 @@ def abrir_dashboard():
                 conn.close()
 
     # ===== CABEÇALHO =====
-    frame_header = tk.Frame(janela, bg="#FFFFFF", height=80)
+    frame_header = tk.Frame(janela, bg="#FFFFFF", height=120)
+    frame_header.pack_propagate(False)
     frame_header.pack(fill=tk.X)
-    # Frame para destacar a logo (sem borda)
+    # A arte já contém o nome LucroVision; mantemos só a imagem no cabeçalho.
     frame_logo = tk.Frame(frame_header, bg="#FFFFFF")
-    frame_logo.pack(side=tk.LEFT, padx=8, pady=2)
+    frame_logo.pack(expand=True)
     if logo_tk is not None:
         label_logo = tk.Label(frame_logo, image=logo_tk, bg="#FFFFFF")
         label_logo.image = logo_tk  # Mantém referência
-        label_logo.pack(padx=2, pady=2)
+        label_logo.pack(padx=4, pady=4)
     else:
-        tk.Label(frame_logo, text="LV", font=("Arial", 18, "bold"), bg="#FFFFFF", fg="#2c3e50").pack(padx=2, pady=2)
-    # Frame para centralizar texto
-    frame_texto = tk.Frame(frame_header, bg="#FFFFFF")
-    frame_texto.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=4)
-    tk.Label(frame_texto, text="Painel de Gestão de Produtos", 
-             font=("Arial", 18,"bold"), bg="#FFFFFF", fg="#000000").pack(expand=True, pady=2)
+        tk.Label(frame_logo, text="LV", font=("Segoe UI", 28, "bold"), bg="#FFFFFF", fg="#2c3e50").pack(padx=4, pady=4)
 
     # ===== FRAME PRINCIPAL =====
     frame_main = tk.Frame(janela, bg="#f0f0f0")
@@ -239,27 +245,27 @@ def abrir_dashboard():
     frame_cards = tk.Frame(frame_main, bg="#f0f0f0")
     frame_cards.pack(fill=tk.X, pady=(0, 20))
 
-    def criar_card(parent, titulo, valor_var, cor):
-        card = tk.Frame(parent, bg=cor, relief=tk.RAISED, borderwidth=2)
+    def criar_card(parent, titulo, cor):
+        card = tk.Frame(parent, bg=cor, corner_radius=16)
         card.pack(side=tk.LEFT, padx=10, fill=tk.BOTH, expand=True)
         
-        tk.Label(card, text=titulo, font=("Arial", 10), bg=cor, fg="white").pack(pady=(10, 5))
-        label_valor = tk.Label(card, text="0", font=("Arial", 18, "bold"), bg=cor, fg="white")
-        label_valor.pack(pady=(0, 15))
+        tk.Label(card, text=titulo, font=("Segoe UI", 16, "bold"), bg=cor, fg="white").pack(pady=(16, 8))
+        label_valor = tk.Label(card, text="0", font=("Segoe UI", 27, "bold"), bg=cor, fg="white")
+        label_valor.pack(pady=(0, 18))
         
         return label_valor
 
-    label_total_produtos = criar_card(frame_cards, "📦 Total de Produtos", "0", "#3498db")
-    label_estoque_baixo = criar_card(frame_cards, "⚠️ Estoque Baixo", "0", "#e74c3c")
-    label_total_itens = criar_card(frame_cards, "📊 Total de Itens", "0", "#2ecc71")
-    label_vendas_mes = criar_card(frame_cards, "💰 Vendas do Mês", "0", "#f39c12")
+    label_total_produtos = criar_card(frame_cards, "📦 Total de Produtos", "#2563eb")
+    label_estoque_baixo = criar_card(frame_cards, "⚠️ Estoque Baixo", "#dc2626")
+    label_total_itens = criar_card(frame_cards, "📊 Total de Itens", "#16a34a")
+    label_vendas_mes = criar_card(frame_cards, "💰 Vendas do Mês", "#d97706")
 
     # Card de valor total
-    card_valor = tk.Frame(frame_cards, bg="#9b59b6", relief=tk.RAISED, borderwidth=2)
+    card_valor = tk.Frame(frame_cards, bg="#7c3aed", corner_radius=16)
     card_valor.pack(side=tk.LEFT, padx=10, fill=tk.BOTH, expand=True)
-    tk.Label(card_valor, text="💵 Valor em Estoque", font=("Arial", 10), bg="#9b59b6", fg="white").pack(pady=(15, 5))
-    label_valor_estoque = tk.Label(card_valor, text="R$ 0,00", font=("Arial", 18, "bold"), bg="#9b59b6", fg="white")
-    label_valor_estoque.pack(pady=(0, 15))
+    tk.Label(card_valor, text="Valor em Estoque", font=("Segoe UI", 16, "bold"), bg="#7c3aed", fg="white").pack(pady=(16, 8))
+    label_valor_estoque = tk.Label(card_valor, text="R$ 0,00", font=("Segoe UI", 27, "bold"), bg="#7c3aed", fg="white")
+    label_valor_estoque.pack(pady=(0, 18))
 
     # ===== FRAME PARA TABELAS =====
     frame_tabelas = tk.Frame(frame_main, bg="#f0f0f0")
@@ -267,7 +273,7 @@ def abrir_dashboard():
 
     # Coluna esquerda - Mais vendidos
     frame_vendidos = tk.LabelFrame(frame_tabelas, text="🔥 Produtos Mais Vendidos (Últimos 30 dias)", 
-                                   font=("Arial", 11, "bold"), bg="white", padx=10, pady=10)
+                                   font=("Segoe UI", 15, "bold"), bg="white", padx=10, pady=10)
     frame_vendidos.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
 
     tree_vendidos = ttk.Treeview(frame_vendidos, columns=("Produto", "Quantidade"), show="headings", height=6)
@@ -279,7 +285,7 @@ def abrir_dashboard():
 
     # Coluna direita - Próximos ao vencimento
     frame_vencimento = tk.LabelFrame(frame_tabelas, text="⏰ Produtos Próximos ao Vencimento", 
-                                     font=("Arial", 11, "bold"), bg="white", padx=10, pady=10)
+                                     font=("Segoe UI", 15, "bold"), bg="white", padx=10, pady=10)
     frame_vencimento.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
     tree_vencimento = ttk.Treeview(frame_vencimento, columns=("Produto", "Validade", "Estoque"), show="headings", height=6)
@@ -293,54 +299,40 @@ def abrir_dashboard():
 
     # ===== BOTÕES DE AÇÃO =====
     frame_botoes = tk.Frame(frame_main, bg="#f0f0f0")
-    frame_botoes.pack(fill=tk.X)
+    frame_botoes.pack(fill=tk.X, pady=(8, 0))
 
-    def criar_botao(parent, texto, comando, cor, desabilitar_apos_clique=False, reabilitar_ao_fechar=False):
+    def criar_botao(parent, texto, comando, cor, hover, coluna, linha, reabilitar_ao_fechar=False):
         def _comando_wrapper():
-            if desabilitar_apos_clique:
-                btn.config(state=tk.DISABLED)
-            filhos_antes = set(janela.winfo_children())
-            root_antes = getattr(tk, "_default_root", None)
-            resultado = comando()
             if reabilitar_ao_fechar:
-                janela_alvo = None
-                if isinstance(resultado, (tk.Toplevel, tk.Tk)):
-                    janela_alvo = resultado
-                else:
-                    filhos_depois = set(janela.winfo_children())
-                    novas_janelas = [
-                        w for w in filhos_depois
-                        if w not in filhos_antes and isinstance(w, tk.Toplevel)
-                    ]
-                    if novas_janelas:
-                        janela_alvo = novas_janelas[-1]
-                    else:
-                        root_depois = getattr(tk, "_default_root", None)
-                        if root_depois is not root_antes and isinstance(root_depois, tk.Tk):
-                            janela_alvo = root_depois
+                btn.config(state=tk.DISABLED)
+            try:
+                janela_alvo = comando()
+            except Exception:
+                btn.configure(state=tk.NORMAL)
+                raise
+            if reabilitar_ao_fechar and isinstance(janela_alvo, tk.Toplevel):
+                def _on_destroy(event):
+                    if event.widget is janela_alvo:
+                        btn.configure(state=tk.NORMAL)
+                janela_alvo.bind("<Destroy>", _on_destroy, add="+")
+            elif reabilitar_ao_fechar:
+                btn.configure(state=tk.NORMAL)
 
-                if janela_alvo is not None:
-                    def _on_destroy(event):
-                        if event.widget is janela_alvo:
-                            btn.config(state=tk.NORMAL)
-
-                    janela_alvo.bind("<Destroy>", _on_destroy)
-                elif desabilitar_apos_clique:
-                    btn.config(state=tk.NORMAL)
-
-        btn = tk.Button(parent, text=texto, command=_comando_wrapper, bg=cor, fg="white", 
-                       font=("Arial", 9, "bold"), relief=tk.RAISED, borderwidth=2,
-                       cursor="hand2", padx=10, pady=8, wraplength=100)
-        btn.pack(side=tk.LEFT, padx=5, expand=True, fill=tk.BOTH)
+        btn = tk.Button(parent, text=texto, command=_comando_wrapper, bg=cor, fg="white",
+                       font=("Segoe UI", 18, "bold"), width=250, height=58,
+                       corner_radius=16, hover_color=hover)
+        btn.grid(row=linha, column=coluna, padx=8, pady=8, sticky="ew")
         return btn
 
-    criar_botao(frame_botoes, "💰 Registrar Venda", vendas.tela_vendas, "#e67e22", desabilitar_apos_clique=True, reabilitar_ao_fechar=True)
-    criar_botao(frame_botoes, "➕ Cadastrar Produto", cadastro_produto.tela_cadastro, "#27ae60", desabilitar_apos_clique=True, reabilitar_ao_fechar=True)
-    criar_botao(frame_botoes, "📦 Ver Estoque", estoque.tela_estoque, "#2980b9", desabilitar_apos_clique=True, reabilitar_ao_fechar=True)
-    criar_botao(frame_botoes, "📊 Relatórios", relatorios.tela_relatorios, "#8e44ad", desabilitar_apos_clique=True, reabilitar_ao_fechar=True)
-    criar_botao(frame_botoes, "👤 Usuários", gerenciar_usuarios, "#34495e", desabilitar_apos_clique=True, reabilitar_ao_fechar=True)
-    criar_botao(frame_botoes, "🔄 Atualizar Dados", atualizar_dashboard, "#f39c12")
-    criar_botao(frame_botoes, "🚪 Sair do Sistema", janela.destroy, "#c0392b")
+    for coluna in range(4):
+        frame_botoes.grid_columnconfigure(coluna, weight=1, uniform="acoes")
+    criar_botao(frame_botoes, "Registrar vendas", vendas.tela_vendas, "#d97706", "#b45309", 0, 0, True)
+    criar_botao(frame_botoes, "Cadastrar produtos", cadastro_produto.tela_cadastro, "#15803d", "#166534", 1, 0, True)
+    criar_botao(frame_botoes, "Ver estoque", estoque.tela_estoque, "#2563eb", "#1d4ed8", 2, 0, True)
+    criar_botao(frame_botoes, "Relatórios", relatorios.tela_relatorios, "#7c3aed", "#6d28d9", 3, 0, True)
+    criar_botao(frame_botoes, "Usuários", gerenciar_usuarios, "#475569", "#334155", 0, 1, True)
+    criar_botao(frame_botoes, "Atualizar dados", atualizar_dashboard, "#b45309", "#92400e", 1, 1)
+    criar_botao(frame_botoes, "Sair do sistema", janela.destroy, "#b91c1c", "#991b1b", 2, 1)
 
     # Atualizar dashboard ao abrir
     atualizar_dashboard()

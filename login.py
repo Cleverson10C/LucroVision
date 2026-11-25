@@ -202,22 +202,22 @@ def tela_login():
     # janela_login.resizable(False, False)
     janela_login.configure(bg="#f0f0f0")
 
-    tk.Label(janela_login, text="Gerenciamento de Usuários", font=("Arial", 14, "bold"), 
+    tk.Label(janela_login, text="Gerenciamento de Usuários", font=("Segoe UI", 20, "bold"),
              bg="#f0f0f0").pack(pady=15)
 
-    tk.Label(janela_login, text="Usuário:", font=("Arial", 10), bg="#f0f0f0").pack(pady=5)
-    campo_usuario = tk.Entry(janela_login, width=30)
+    tk.Label(janela_login, text="Usuário:", font=("Arial", 15, "bold"), bg="#f0f0f0").pack(pady=5)
+    campo_usuario = tk.Entry(janela_login, width=300, height=40)
     campo_usuario.pack()
 
-    tk.Label(janela_login, text="Senha:", font=("Arial", 10), bg="#f0f0f0").pack(pady=5)
-    campo_senha = tk.Entry(janela_login, width=30, show="*")
+    tk.Label(janela_login, text="Senha:", font=("Arial", 15, "bold"), bg="#f0f0f0").pack(pady=5)
+    campo_senha = tk.Entry(janela_login, width=300, height=40, show="*")
     campo_senha.pack()
 
     # Permitir Enter para fazer login
     campo_senha.bind('<Return>', lambda event: autenticar_usuario())
 
-    tk.Button(janela_login, text="Entrar", command=autenticar_usuario, 
-             bg="#3498db", fg="white", font=("Arial", 11, "bold"), 
+    tk.Button(janela_login, text="Entrar", command=autenticar_usuario,
+             bg="#3498db", fg="white", font=("Segoe UI", 16, "bold"),
              padx=40, pady=8).pack(pady=20)
     
     inicializacao_pendente = False
@@ -231,8 +231,8 @@ def tela_login():
     except Exception:
         logger.exception("Não foi possível consultar estado de configuração inicial")
     if inicializacao_pendente:
-        tk.Label(janela_login, text="Primeira configuração: crie a conta administradora.", bg="#f0f0f0", font=("Arial", 10)).pack()
+        tk.Label(janela_login, text="Primeira configuração: crie a conta administradora.", bg="#f0f0f0", font=("Segoe UI", 15, "bold")).pack()
         tk.Button(janela_login, text="Criar administrador", command=cadastrar_usuario,
-                  bg="#27ae60", fg="white", font=("Arial", 11, "bold"), padx=20, pady=5).pack(pady=5)
+                  bg="#27ae60", fg="white", font=("Segoe UI", 15, "bold"), padx=20, pady=5).pack(pady=5)
 
     janela_login.mainloop()

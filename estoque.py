@@ -241,3 +241,4 @@ def tela_estoque():
     # Carregar dados iniciais
     carregar_lista_produtos()
     atualizar_estatisticas()
+    return janela_estoque

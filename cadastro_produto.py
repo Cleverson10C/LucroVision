@@ -245,3 +245,4 @@ def tela_cadastro():
 
     # Botão de salvar
     tk.Button(janela_cadastro, text="Salvar Produto", bg="#27ae60", fg="white", command=salvar_produto).pack(pady=10)
+    return janela_cadastro

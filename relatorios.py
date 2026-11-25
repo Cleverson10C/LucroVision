@@ -104,3 +104,4 @@ def tela_relatorios():
         logger.info("Montagem dos relatorios concluida")
     except Exception:
         logger.exception("Falha ao montar relatorios")
+    return janela_relatorios
