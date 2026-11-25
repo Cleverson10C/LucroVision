@@ -24,26 +24,32 @@ def tela_vendas():
     janela_vendas = tk.Toplevel()
     configurar_tabelas()
     janela_vendas.title("Registrar Venda")
-    janela_vendas.geometry("1200x780")
+    janela_vendas.geometry("1280x820")
+    try:
+        janela_vendas.state("zoomed")
+    except tk.TclError:
+        janela_vendas.after(100, lambda: janela_vendas.attributes("-zoomed", True))
     janela_vendas.configure(bg="#f0f0f0")
     
     # Frame superior - Seleção de produto
     frame_superior = tk.LabelFrame(janela_vendas, text="Selecionar Produto", 
-                                   font=("Arial", 11, "bold"), bg="white", padx=15, pady=15)
-    frame_superior.pack(pady=10, padx=20, fill=tk.X)
+                                   font=("Segoe UI", 15, "bold"), bg="white", padx=15, pady=15)
+    frame_superior.pack(pady=10, padx=20, fill=tk.BOTH, expand=True)
+    frame_superior.grid_columnconfigure(1, weight=1)
+    frame_superior.grid_rowconfigure(2, weight=1)
     
     # Campo de busca
-    tk.Label(frame_superior, text="Buscar produto:", bg="white", font=("Arial", 10)).grid(row=0, column=0, sticky=tk.W, pady=5)
-    campo_busca = tk.Entry(frame_superior, width=40, font=("Arial", 10))
+    tk.Label(frame_superior, text="Buscar produto:", bg="white", font=("Segoe UI", 14)).grid(row=0, column=0, sticky=tk.W, pady=5)
+    campo_busca = tk.Entry(frame_superior, width=360, height=40, font=("Segoe UI", 14))
     campo_busca.grid(row=0, column=1, padx=10, pady=5)
 
     # Campo de leitura de código de barras
-    tk.Label(frame_superior, text="Código de barras:", bg="white", font=("Arial", 10)).grid(row=0, column=2, sticky=tk.W, padx=(10, 0), pady=5)
-    campo_codigo_barras = tk.Entry(frame_superior, width=14, font=("Arial", 10))
+    tk.Label(frame_superior, text="Código de barras:", bg="white", font=("Segoe UI", 14)).grid(row=0, column=2, sticky=tk.W, padx=(10, 0), pady=5)
+    campo_codigo_barras = tk.Entry(frame_superior, width=190, height=40, font=("Segoe UI", 14))
     campo_codigo_barras.grid(row=0, column=3, padx=10, pady=5)
     
     # Lista de produtos disponíveis
-    tk.Label(frame_superior, text="Produtos disponíveis:", bg="white", font=("Arial", 10)).grid(row=1, column=0, columnspan=2, sticky=tk.W, pady=(10, 5))
+    tk.Label(frame_superior, text="Produtos disponíveis:", bg="white", font=("Segoe UI", 14, "bold")).grid(row=1, column=0, columnspan=2, sticky=tk.W, pady=(10, 5))
     
     frame_lista = tk.Frame(frame_superior, bg="white")
     frame_lista.grid(row=2, column=0, columnspan=2, sticky="nsew", pady=5)
@@ -74,36 +80,36 @@ def tela_vendas():
     
     # Frame de informações do produto selecionado
     frame_info = tk.LabelFrame(janela_vendas, text="Informações da Venda", 
-                               font=("Arial", 11, "bold"), bg="white", padx=15, pady=15)
+                                   font=("Segoe UI", 15, "bold"), bg="white", padx=15, pady=15)
     frame_info.pack(pady=10, padx=20, fill=tk.X)
 
     # Variáveis para armazenar informações
     produto_selecionado = {"id": None, "nome": "", "preco": 0.0, "estoque": 0, "categoria": "", "codigo_barras": ""}
     itens_venda = []  # Lista de itens da venda
 
-    tk.Label(frame_info, text="Produto:", bg="white", font=("Arial", 10, "bold")).grid(row=0, column=0, sticky=tk.W, pady=5)
-    label_produto_selecionado = tk.Label(frame_info, text="Nenhum produto selecionado", bg="white", font=("Arial", 10))
+    tk.Label(frame_info, text="Produto:", bg="white", font=("Segoe UI", 13, "bold")).grid(row=0, column=0, sticky=tk.W, pady=5)
+    label_produto_selecionado = tk.Label(frame_info, text="Nenhum produto selecionado", bg="white", font=("Segoe UI", 13))
     label_produto_selecionado.grid(row=0, column=1, sticky=tk.W, padx=10, pady=5)
 
-    tk.Label(frame_info, text="Preço unitário:", bg="white", font=("Arial", 10, "bold")).grid(row=1, column=0, sticky=tk.W, pady=5)
-    label_preco = tk.Label(frame_info, text="R$ 0,00", bg="white", font=("Arial", 10))
+    tk.Label(frame_info, text="Preço unitário:", bg="white", font=("Segoe UI", 13, "bold")).grid(row=1, column=0, sticky=tk.W, pady=5)
+    label_preco = tk.Label(frame_info, text="R$ 0,00", bg="white", font=("Segoe UI", 13))
     label_preco.grid(row=1, column=1, sticky=tk.W, padx=10, pady=5)
 
-    tk.Label(frame_info, text="Estoque disponível:", bg="white", font=("Arial", 10, "bold")).grid(row=2, column=0, sticky=tk.W, pady=5)
-    label_estoque = tk.Label(frame_info, text="0 unidades", bg="white", font=("Arial", 10))
+    tk.Label(frame_info, text="Estoque disponível:", bg="white", font=("Segoe UI", 13, "bold")).grid(row=2, column=0, sticky=tk.W, pady=5)
+    label_estoque = tk.Label(frame_info, text="0 unidades", bg="white", font=("Segoe UI", 13))
     label_estoque.grid(row=2, column=1, sticky=tk.W, padx=10, pady=5)
 
     # Campo de quantidade (padrão)
-    tk.Label(frame_info, text="Quantidade:", bg="white", font=("Arial", 10, "bold")).grid(row=3, column=0, sticky=tk.W, pady=5)
-    campo_quantidade = tk.Entry(frame_info, width=15, font=("Arial", 10))
+    tk.Label(frame_info, text="Quantidade:", bg="white", font=("Segoe UI", 13, "bold")).grid(row=3, column=0, sticky=tk.W, pady=5)
+    campo_quantidade = tk.Entry(frame_info, width=140, height=38, font=("Segoe UI", 13))
     campo_quantidade.grid(row=3, column=1, sticky=tk.W, padx=10, pady=5)
     campo_quantidade.insert(0, "1")
     # Campo especial para carnes e frios
-    campo_kg = tk.Entry(frame_info, width=15, font=("Arial", 10))
+    campo_kg = tk.Entry(frame_info, width=140, height=38, font=("Segoe UI", 13))
     campo_kg.grid(row=3, column=2, sticky=tk.W, padx=10, pady=5)
     campo_kg.insert(0, "0,100")
     campo_kg.grid_remove()  # Esconde por padrão
-    label_kg = tk.Label(frame_info, text="(Ex: 0,350 para 350g)", bg="white", font=("Arial", 8, "italic"))
+    label_kg = tk.Label(frame_info, text="(Ex: 0,350 para 350g)", bg="white", font=("Segoe UI", 11, "italic"))
     label_kg.grid(row=3, column=3, sticky=tk.W, padx=5)
     label_kg.grid_remove()
     # Botões de ajuste para kg
@@ -196,7 +202,9 @@ def tela_vendas():
         label_total.config(text=total_formatado)
 
     # Botão para adicionar item à venda
-    botao_add_item = tk.Button(frame_info, text="Adicionar à Venda", command=adicionar_item_venda, bg="#2980b9", fg="white", font=("Arial", 10, "bold"))
+    botao_add_item = tk.Button(frame_info, text="Adicionar à Venda", command=adicionar_item_venda,
+                               bg="#2980b9", fg="white", font=("Segoe UI", 14, "bold"),
+                               width=210, height=44, corner_radius=12)
     botao_add_item.grid(row=3, column=4, padx=10, pady=5)
     btn_menos = tk.Label(frame_info, text="-0,100kg", width=8)
     btn_mais = tk.Label(frame_info, text="+0,100kg", width=8)
@@ -308,8 +316,8 @@ def tela_vendas():
     
 
     # ====== CRIAÇÃO DO LABEL TOTAL =====
-    tk.Label(frame_info, text="Total da Compra:", bg="white", font=("Arial", 11, "bold")).grid(row=6, column=0, sticky=tk.W, pady=10)
-    label_total = tk.Label(frame_info, text="R$ 0,00", bg="white", font=("Arial", 14, "bold"), fg="#27ae60")
+    tk.Label(frame_info, text="Total da Compra:", bg="white", font=("Segoe UI", 15, "bold")).grid(row=6, column=0, sticky=tk.W, pady=10)
+    label_total = tk.Label(frame_info, text="R$ 0,00", bg="white", font=("Segoe UI", 19, "bold"), fg="#15803d")
     label_total.grid(row=6, column=1, sticky=tk.W, padx=10, pady=10)
 
     def calcular_total():
@@ -477,14 +485,14 @@ def tela_vendas():
     frame_botoes = tk.Frame(janela_vendas, bg="#f0f0f0")
     frame_botoes.pack(pady=20, padx=20)
 
-    botao_registrar = tk.Button(frame_botoes, text="💰 Registrar Venda", command=registrar_venda, 
-                                bg="#27ae60", fg="white", font=("Arial", 11, "bold"), 
-                                padx=35, pady=10, cursor="hand2", relief=tk.RAISED, borderwidth=2)
+    botao_registrar = tk.Button(frame_botoes, text="Registrar venda", command=registrar_venda,
+                                bg="#15803d", fg="white", font=("Segoe UI", 18, "bold"),
+                                width=280, height=64, corner_radius=16)
     botao_registrar.pack(side=tk.LEFT, padx=10)
 
-    botao_cancelar = tk.Button(frame_botoes, text="❌ Cancelar", command=janela_vendas.destroy, 
-                               bg="#c0392b", fg="white", font=("Arial", 11, "bold"), 
-                               padx=35, pady=10, cursor="hand2", relief=tk.RAISED, borderwidth=2)
+    botao_cancelar = tk.Button(frame_botoes, text="Cancelar", command=janela_vendas.destroy,
+                               bg="#b91c1c", fg="white", font=("Segoe UI", 18, "bold"),
+                               width=280, height=64, corner_radius=16)
     botao_cancelar.pack(side=tk.LEFT, padx=10)
 
     # Carregar produtos inicialmente

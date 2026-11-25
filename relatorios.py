@@ -10,29 +10,31 @@ def tela_relatorios():
     logger.info("Tela de relatorios aberta")
     janela_relatorios = tk.Toplevel()
     janela_relatorios.title("Relatórios de Lucratividade")
-    janela_relatorios.geometry("800x700")
+    janela_relatorios.geometry("1050x780")
 
     # Secao de Lucro Mensal
-    tk.Label(janela_relatorios, text="Lucro Mensal", font=("Arial", 12, "bold")).pack(pady=5)
+    tk.Label(janela_relatorios, text="Lucro Mensal", font=("Segoe UI", 19, "bold")).pack(pady=8)
     frame_mensal = tk.Frame(janela_relatorios)
     frame_mensal.pack(pady=5, padx=10, fill=tk.BOTH, expand=True)
 
     scrollbar_mensal = tk.Scrollbar(frame_mensal)
     scrollbar_mensal.pack(side=tk.RIGHT, fill=tk.Y)
 
-    lista_lucros_mensais = tk.Listbox(frame_mensal, width=80, height=12, yscrollcommand=scrollbar_mensal.set)
+    lista_lucros_mensais = tk.Listbox(frame_mensal, width=80, height=12, font=("Segoe UI", 14),
+                                      background="#FFFFFF", foreground="#1F2937", yscrollcommand=scrollbar_mensal.set)
     lista_lucros_mensais.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
     scrollbar_mensal.config(command=lista_lucros_mensais.yview)
 
     # Secao de Lucro Anual
-    tk.Label(janela_relatorios, text="Lucro Anual", font=("Arial", 12, "bold")).pack(pady=10)
+    tk.Label(janela_relatorios, text="Lucro Anual", font=("Segoe UI", 19, "bold")).pack(pady=10)
     frame_anual = tk.Frame(janela_relatorios)
     frame_anual.pack(pady=5, padx=10, fill=tk.BOTH, expand=True)
 
     scrollbar_anual = tk.Scrollbar(frame_anual)
     scrollbar_anual.pack(side=tk.RIGHT, fill=tk.Y)
 
-    lista_lucros_anuais = tk.Listbox(frame_anual, width=80, height=12, yscrollcommand=scrollbar_anual.set)
+    lista_lucros_anuais = tk.Listbox(frame_anual, width=80, height=12, font=("Segoe UI", 14),
+                                     background="#FFFFFF", foreground="#1F2937", yscrollcommand=scrollbar_anual.set)
     lista_lucros_anuais.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
     scrollbar_anual.config(command=lista_lucros_anuais.yview)
 

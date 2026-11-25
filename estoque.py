@@ -39,13 +39,13 @@ def tela_estoque():
     janela_estoque = tk.Toplevel()
     configurar_tabelas()
     janela_estoque.title("Controle de Estoque")
-    janela_estoque.geometry("860x600")
+    janela_estoque.geometry("1050x740")
 
     # Frame superior com título e filtros
     frame_superior = tk.Frame(janela_estoque)
     frame_superior.pack(pady=10, padx=10, fill=tk.X)
 
-    tk.Label(frame_superior, text="Controle de Estoque", font=("Arial", 14, "bold")).pack(side=tk.LEFT, padx=10)
+    tk.Label(frame_superior, text="Controle de Estoque", font=("Segoe UI", 20, "bold")).pack(side=tk.LEFT, padx=10)
 
     # Variáveis para filtros
     tipo_filtro = tk.StringVar(value="todos")
@@ -67,7 +67,8 @@ def tela_estoque():
         if categoria_filtro.get() not in lista_categorias:
             categoria_filtro.set("Todas")
 
-    tk.Label(frame_superior, text="Categoria:").pack(side=tk.LEFT, padx=5)
+    ttk.Style().configure("TCombobox", font=("Segoe UI", 14), padding=6)
+    tk.Label(frame_superior, text="Categoria:", font=("Segoe UI", 15)).pack(side=tk.LEFT, padx=5)
     combo_categoria = ttk.Combobox(frame_superior, state="readonly", textvariable=categoria_filtro, width=12)
     combo_categoria.pack(side=tk.LEFT, padx=5)
     atualizar_categorias()
@@ -152,9 +153,9 @@ def tela_estoque():
             tabela_produtos.insert("", tk.END, values=("Nenhum produto encontrado", "", "", "", "", ""))
 
     # Botões de filtro (radio buttons)
-    tk.Radiobutton(frame_superior, text="Todos os Produtos", variable=tipo_filtro, value="todos", 
+    tk.Radiobutton(frame_superior, text="Todos os Produtos", variable=tipo_filtro, value="todos", font=("Segoe UI", 14),
                    command=carregar_lista_produtos).pack(side=tk.LEFT, padx=5)
-    tk.Radiobutton(frame_superior, text="Apenas Estoque Baixo", variable=tipo_filtro, value="baixo", 
+    tk.Radiobutton(frame_superior, text="Apenas Estoque Baixo", variable=tipo_filtro, value="baixo", font=("Segoe UI", 14),
                    command=carregar_lista_produtos).pack(side=tk.LEFT, padx=5)
     combo_categoria.bind("<<ComboboxSelected>>", lambda e: carregar_lista_produtos())
 
@@ -198,7 +199,7 @@ def tela_estoque():
     frame_informacoes = tk.Frame(janela_estoque)
     frame_informacoes.pack(pady=10, padx=10, fill=tk.X)
 
-    rotulo_estatisticas = tk.Label(frame_informacoes, text="", font=("Arial", 9))
+    rotulo_estatisticas = tk.Label(frame_informacoes, text="", font=("Segoe UI", 14))
     rotulo_estatisticas.pack()
 
     def atualizar_estatisticas():

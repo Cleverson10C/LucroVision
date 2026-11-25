@@ -152,15 +152,15 @@ def configurar_tabelas() -> None:
         background="#FFFFFF",
         fieldbackground="#FFFFFF",
         foreground="#1F2937",
-        rowheight=30,
+        rowheight=36,
         borderwidth=0,
-        font=("Segoe UI", 10),
+        font=("Segoe UI", 12),
     )
     estilo.configure(
         "Treeview.Heading",
         background="#E8EEF7",
         foreground="#172B4D",
-        font=("Segoe UI", 10, "bold"),
+        font=("Segoe UI", 12, "bold"),
         relief="flat",
     )
     estilo.map("Treeview", background=[("selected", "#C7DBF8")], foreground=[("selected", "#172B4D")])
