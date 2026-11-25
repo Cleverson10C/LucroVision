@@ -108,8 +108,8 @@ def abrir_dashboard():
         caminho_logo = obter_caminho_recurso("Logo.png")
         if os.path.exists(caminho_logo):
             logo_img = Image.open(caminho_logo)
-            logo_img = logo_img.resize((108, 108), Image.Resampling.LANCZOS)
-            logo_tk = CTkImage(light_image=logo_img, dark_image=logo_img, size=(108, 108))
+            logo_img = logo_img.resize((140, 140), Image.Resampling.LANCZOS)
+            logo_tk = CTkImage(light_image=logo_img, dark_image=logo_img, size=(140, 140))
             logger.info("Logo carregada com sucesso de %s", caminho_logo)
     except Exception:
         logger.exception("Falha ao carregar logo")
@@ -225,7 +225,7 @@ def abrir_dashboard():
                 conn.close()
 
     # ===== CABEÇALHO =====
-    frame_header = tk.Frame(janela, bg="#FFFFFF", height=120)
+    frame_header = tk.Frame(janela, bg="#FFFFFF", height=156)
     frame_header.pack_propagate(False)
     frame_header.pack(fill=tk.X)
     # A arte já contém o nome LucroVision; mantemos só a imagem no cabeçalho.

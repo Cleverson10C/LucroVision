@@ -32,9 +32,12 @@ def tela_vendas():
     janela_vendas.configure(bg="#f0f0f0")
     
     # Frame superior - Seleção de produto
+    janela_vendas.grid_columnconfigure(0, weight=1)
+    janela_vendas.grid_rowconfigure(0, weight=1)
+
     frame_superior = tk.LabelFrame(janela_vendas, text="Selecionar Produto", 
                                    font=("Segoe UI", 15, "bold"), bg="white", padx=15, pady=15)
-    frame_superior.pack(pady=10, padx=20, fill=tk.BOTH, expand=True)
+    frame_superior.grid(row=0, column=0, pady=(10, 5), padx=20, sticky="nsew")
     frame_superior.grid_columnconfigure(1, weight=1)
     frame_superior.grid_rowconfigure(2, weight=1)
     
@@ -81,7 +84,7 @@ def tela_vendas():
     # Frame de informações do produto selecionado
     frame_info = tk.LabelFrame(janela_vendas, text="Informações da Venda", 
                                    font=("Segoe UI", 15, "bold"), bg="white", padx=15, pady=15)
-    frame_info.pack(pady=10, padx=20, fill=tk.X)
+    frame_info.grid(row=1, column=0, pady=5, padx=20, sticky="ew")
 
     # Variáveis para armazenar informações
     produto_selecionado = {"id": None, "nome": "", "preco": 0.0, "estoque": 0, "categoria": "", "codigo_barras": ""}
@@ -483,7 +486,7 @@ def tela_vendas():
 
     # Botões
     frame_botoes = tk.Frame(janela_vendas, bg="#f0f0f0")
-    frame_botoes.pack(pady=20, padx=20)
+    frame_botoes.grid(row=2, column=0, pady=(5, 18), padx=20)
 
     botao_registrar = tk.Button(frame_botoes, text="Registrar venda", command=registrar_venda,
                                 bg="#15803d", fg="white", font=("Segoe UI", 18, "bold"),
