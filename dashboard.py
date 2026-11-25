@@ -228,7 +228,6 @@ def abrir_dashboard():
     frame_header = tk.Frame(janela, bg="#FFFFFF", height=156)
     frame_header.pack_propagate(False)
     frame_header.pack(fill=tk.X)
-    # A arte já contém o nome LucroVision; mantemos só a imagem no cabeçalho.
     frame_logo = tk.Frame(frame_header, bg="#FFFFFF")
     frame_logo.pack(side=tk.LEFT, padx=16, pady=4)
     if logo_tk is not None:
@@ -236,6 +235,14 @@ def abrir_dashboard():
         label_logo.pack(padx=4, pady=4)
     else:
         tk.Label(frame_logo, text="LV", font=("Segoe UI", 28, "bold"), bg="#FFFFFF", fg="#2c3e50").pack(padx=4, pady=4)
+
+    tk.Label(
+        frame_header,
+        text="Painel de Gestão",
+        font=("Segoe UI", 26, "bold"),
+        bg="#FFFFFF",
+        fg="#1f2937",
+    ).pack(side=tk.LEFT, padx=(12, 0), pady=4)
 
     # ===== FRAME PRINCIPAL =====
     frame_main = tk.Frame(janela, bg="#f0f0f0")
