@@ -48,7 +48,7 @@ def gerenciar_usuarios():
 
     janela_usuario = tk.Toplevel()
     janela_usuario.title("Cadastrar usuário")
-    janela_usuario.geometry("360x300")
+    janela_usuario.geometry("360x345")
     tk.Label(janela_usuario, text="Novo usuário", font=("Segoe UI", 20, "bold")).pack(pady=12)
     tk.Label(janela_usuario, text="Usuário", font=("Segoe UI", 14)).pack()
     campo_usuario = tk.Entry(janela_usuario, width=300, height=36)
@@ -91,7 +91,7 @@ def abrir_dashboard():
     janela = tk.Tk()
     configurar_tabelas()
     janela.title("Painel de Gestão de Produtos — LucroVision")
-    janela.geometry("1100x700")
+    janela.geometry("1280x820")
     try:
         janela.state("zoomed")
     except tk.TclError:
@@ -238,11 +238,11 @@ def abrir_dashboard():
 
     tk.Label(
         frame_header,
-        text="Painel de Gestão",
+        text="Painel Administrativo — LucroVision",
         font=("Segoe UI", 26, "bold"),
         bg="#FFFFFF",
         fg="#1f2937",
-    ).pack(side=tk.LEFT, padx=(12, 0), pady=4)
+    ).pack(side=tk.CENTER, padx=(12, 0), pady=4)
 
     # ===== FRAME PRINCIPAL =====
     frame_main = tk.Frame(janela, bg="#f0f0f0")

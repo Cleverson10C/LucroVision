@@ -198,7 +198,7 @@ def tela_login():
 
     janela_login = tk.Tk()
     janela_login.title("Login - Sistema Gerenciamento")
-    janela_login.geometry("450x350")
+    janela_login.geometry("450x320")
     # janela_login.resizable(False, False)
     janela_login.configure(bg="#f0f0f0")
 
@@ -217,7 +217,7 @@ def tela_login():
     campo_senha.bind('<Return>', lambda event: autenticar_usuario())
 
     tk.Button(janela_login, text="Entrar", command=autenticar_usuario,
-             bg="#3498db", fg="white", font=("Segoe UI", 16, "bold"),
+             width=100, height=40, bg="#3498db", fg="white", font=("Segoe UI", 16, "bold"),
              padx=40, pady=8).pack(pady=20)
     
     inicializacao_pendente = False
